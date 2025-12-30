@@ -120,7 +120,6 @@ with col_main:
         use_single_anchor = False
         _, best_aisle, best_n_db = solve_bay("Double")
 
-    # Final Coordinate Generation
     def get_coords(length_limit):
         coords = []
         grid = np.arange(0, length_limit + 1, (col_y if orientation == "Horizontal" else col_x))
@@ -201,12 +200,12 @@ receipt_html = (
     f'<div style="font-weight: bold; margin-bottom: 2px;">BUILDING METRICS</div>'
     f'<div style="color: #888; font-size: 0.85em; font-style: italic;">{b_l:,.0f}ft L × {b_w:,.0f}ft W</div>'
     f'<div style="font-weight: bold;">Area: {b_sf:,.0f} SF</div>'
-    f'<div style="font-weight: bold; margin-top: 4px;">Current Aisle: {best_aisle:.2f} ft</div>'
-    f'<div style="color: #888; font-size: 0.85em; font-style: italic;">(Min Aisle set to {min_aisle:,.1f} ft)</div>'
     f'<div style="border-top: 1px dashed #333; margin: 12px 0;"></div>'
     f'<div style="font-weight: bold; margin-bottom: 2px;">RACKING DATA</div>'
     f'<div style="color: #888; font-size: 0.85em; font-style: italic;">{len(unique_final)} rows × {r_ft:,.2f}ft D</div>'
-    f'<div style="font-weight: bold;">Rack Cube: {rack_cf:,.0f} CF</div>'
+    f'<div style="font-weight: bold;">Current Aisle: {best_aisle:.2f} ft</div>'
+    f'<div style="color: #888; font-size: 0.85em; font-style: italic;">(Min Aisle set to {min_aisle:,.1f} ft)</div>'
+    f'<div style="font-weight: bold; margin-top: 4px;">Rack Cube: {rack_cf:,.0f} CF</div>'
     f'<div style="border-top: 1px dashed #333; margin: 12px 0;"></div>'
     
     f'<div style="background-color: #f8f9fa; padding: 10px; border: 1px solid #343a40; margin-top: 10px;">'
