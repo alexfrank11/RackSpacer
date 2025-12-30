@@ -5,6 +5,10 @@ import plotly.graph_objects as go
 # --- PAGE CONFIG ---
 st.set_page_config(page_title="Warehouse Cube Optimizer", layout="wide")
 
+# --- INITIALIZE MEMORY ---
+if 'history' not in st.session_state:
+    st.session_state.history = []
+
 # --- CSS: RESPONSIVE FIXED SIDEBAR & STYLING ---
 st.markdown("""
     <style>
@@ -18,6 +22,12 @@ st.markdown("""
         background-color: white; border: 2px solid #333; padding: 15px; 
         box-shadow: 8px 8px 0px #ddd; font-family: 'Courier New', Courier, monospace; 
         z-index: 9999; color: black; max-height: 90vh; overflow-y: auto;
+    }
+    .snapshot-btn button {
+        background-color: #6a0dad !important;
+        color: white !important;
+        font-weight: bold !important;
+        border-radius: 5px !important;
     }
     @media (max-width: 1200px) {
         .fixed-receipt-sidebar { 
@@ -159,8 +169,6 @@ with col_main:
     fig.update_layout(width=800, height=400, xaxis=dict(range=[-10, b_l+10], scaleanchor="y"), yaxis=dict(range=[-10, b_w+10]))
     st.plotly_chart(fig)
 
-    
-
     st.subheader("Engineering Pattern Detail")
     fig2 = go.Figure()
     for x in [0, col_x, col_x*2]:
@@ -175,8 +183,6 @@ with col_main:
             fig2.add_shape(type="rect", x0=px0, y0=py0, x1=px1, y1=py1, fillcolor="purple", opacity=0.3)
     fig2.update_layout(width=800, height=450, xaxis=dict(range=[-10, col_x*2+10], scaleanchor="y"), yaxis=dict(range=[-10, col_y*2+10]))
     st.plotly_chart(fig2)
-
-    
 
 # --- 2. FINAL CALCULATIONS & RECEIPT ---
 b_sf, b_cf = b_l * b_w, b_l * b_w * clear_ht
@@ -221,3 +227,36 @@ receipt_html = (
 )
 
 st.markdown(receipt_html, unsafe_allow_html=True)
+
+# --- 3. MEMORY SYSTEM (LHS MAIN COLUMN) ---
+with col_main:
+    st.divider()
+    st.header("📋 Scenario Comparison Memory")
+    
+    # Capture Row
+    snap_col1, snap_col2 = st.columns([3, 1])
+    with snap_col1:
+        scenario_label = st.text_input("Scenario Name (e.g. 'Standard 40ft' or 'High Density')", placeholder="Enter name...")
+    with snap_col2:
+        st.markdown('<div class="snapshot-btn">', unsafe_allow_html=True)
+        if st.button("💾 Save Snapshot"):
+            name = scenario_label if scenario_label else f"Scenario {len(st.session_state.history) + 1}"
+            st.session_state.history.append({
+                "Name": name,
+                "Grid": f"{col_x:,.0f}'x{col_y:,.0f}'",
+                "Aisle": f"{best_aisle:.2f} ft",
+                "Building Util": f"{build_util:.1f}%",
+                "Pattern Util": f"{pattern_util:.1f}%",
+                "Storage Cube": f"{rack_cf:,.0f} CF"
+            })
+        st.markdown('</div>', unsafe_allow_html=True)
+
+    # Display History
+    if st.session_state.history:
+        # Using st.dataframe with hide_index=True to remove the counter column
+        st.dataframe(st.session_state.history, use_container_width=True, hide_index=True)
+        if st.button("🗑️ Clear History"):
+            st.session_state.history = []
+            st.rerun()
+    else:
+        st.info("Save a snapshot above to compare different layout scenarios.")
