@@ -191,7 +191,6 @@ rack_sf = len(unique_final) * r_ft * r_len_v
 rack_cf = rack_sf * clear_ht
 build_util = (rack_cf / b_cf) * 100 if b_cf > 0 else 0
 
-# PATTERN UTILIZATION MATH
 pattern_bay_area = col_x * col_y
 rows_in_cell = (1 if use_single_anchor else 2) + (best_n_db * 2)
 p_rack_sf = rows_in_cell * r_ft * (col_x if orientation == "Horizontal" else col_y)
@@ -202,6 +201,8 @@ receipt_html = (
     f'<div style="font-weight: bold; margin-bottom: 2px;">BUILDING METRICS</div>'
     f'<div style="color: #888; font-size: 0.85em; font-style: italic;">{b_l:,.0f}ft L × {b_w:,.0f}ft W</div>'
     f'<div style="font-weight: bold;">Area: {b_sf:,.0f} SF</div>'
+    f'<div style="font-weight: bold; margin-top: 4px;">Current Aisle: {best_aisle:.2f} ft</div>'
+    f'<div style="color: #888; font-size: 0.85em; font-style: italic;">(Min Aisle set to {min_aisle:,.1f} ft)</div>'
     f'<div style="border-top: 1px dashed #333; margin: 12px 0;"></div>'
     f'<div style="font-weight: bold; margin-bottom: 2px;">RACKING DATA</div>'
     f'<div style="color: #888; font-size: 0.85em; font-style: italic;">{len(unique_final)} rows × {r_ft:,.2f}ft D</div>'
@@ -228,12 +229,12 @@ receipt_html = (
 
 st.markdown(receipt_html, unsafe_allow_html=True)
 
-# --- 3. MEMORY SYSTEM (LHS MAIN COLUMN) ---
+# --- 3. TEMPORARY SESSION MEMORY (LHS MAIN COLUMN) ---
 with col_main:
     st.divider()
-    st.header("📋 Scenario Comparison Memory")
+    st.header("📋 Session Scenario Comparison")
+    st.caption("⚠️ This table is a temporary 'scratchpad' for your current session. Refreshing the browser will clear all saved entries.")
     
-    # Capture Row
     snap_col1, snap_col2 = st.columns([3, 1])
     with snap_col1:
         scenario_label = st.text_input("Scenario Name (e.g. 'Standard 40ft' or 'High Density')", placeholder="Enter name...")
@@ -251,12 +252,10 @@ with col_main:
             })
         st.markdown('</div>', unsafe_allow_html=True)
 
-    # Display History
     if st.session_state.history:
-        # Using st.dataframe with hide_index=True to remove the counter column
         st.dataframe(st.session_state.history, use_container_width=True, hide_index=True)
-        if st.button("🗑️ Clear History"):
+        if st.button("🗑️ Clear Current History"):
             st.session_state.history = []
             st.rerun()
     else:
-        st.info("Save a snapshot above to compare different layout scenarios.")
+        st.info("Snapshots saved here are temporary and will be lost on page refresh.")
