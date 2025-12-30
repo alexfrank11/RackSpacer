@@ -5,42 +5,27 @@ import plotly.graph_objects as go
 # --- PAGE CONFIG ---
 st.set_page_config(page_title="Warehouse Cube Optimizer", layout="wide")
 
-# --- CSS: RESPONSIVE FIXED SIDEBAR ---
+# --- CSS: RESPONSIVE FIXED SIDEBAR & STYLING ---
 st.markdown("""
     <style>
-    /* Main Layout */
     .block-container { 
         max-width: 100% !important; padding-top: 2rem; 
         margin-left: 0 !important; margin-right: 0 !important; 
         padding-left: 50px !important; 
     }
-    
-    /* Desktop Sidebar Style */
     .fixed-receipt-sidebar { 
         position: fixed; top: 80px; right: 20px; width: 320px; 
         background-color: white; border: 2px solid #333; padding: 15px; 
         box-shadow: 8px 8px 0px #ddd; font-family: 'Courier New', Courier, monospace; 
         z-index: 9999; color: black; max-height: 90vh; overflow-y: auto;
     }
-
-    /* Mobile/Small Screen Override */
     @media (max-width: 1200px) {
         .fixed-receipt-sidebar { 
-            position: static; /* Moves it to the bottom of the page flow */
-            width: 100%; 
-            margin-top: 40px; 
-            box-shadow: none;
-            border-top: 4px solid #6a0dad;
+            position: static; width: 100%; margin-top: 40px; 
+            box-shadow: none; border-top: 4px solid #6a0dad;
         }
-        .block-container {
-            padding-left: 15px !important;
-            padding-right: 15px !important;
-        }
-        [data-testid="column"]:nth-child(1) { 
-            min-width: 100% !important; 
-        }
+        .block-container { padding-left: 15px !important; padding-right: 15px !important; }
     }
-
     [data-testid="stSidebar"] { display: none; }
     </style>
     """, unsafe_allow_html=True)
@@ -125,45 +110,47 @@ with col_main:
         use_single_anchor = False
         _, best_aisle, best_n_db = solve_bay("Double")
 
-    # Boundaries
-    r_min_x = max(sb_depth if sb_l else 0, rt_val_l)
-    r_max_x = b_l - max(sb_depth if sb_r else 0, rt_val_r)
-    r_min_y = max(sb_depth if sb_b else 0, rt_val_b)
-    r_max_y = b_w - max(sb_depth if sb_t else 0, rt_val_t)
-    
-    # Layout Generation
-    final_coords = []
-    grid = np.arange(0, (b_w if orientation == "Horizontal" else b_l) + 1, (col_y if orientation == "Horizontal" else col_x))
-    for g in grid:
-        if use_single_anchor:
-            final_coords.append((g - r_ft/2, g + r_ft/2))
-            curr = g + r_ft/2 + best_aisle
-        else:
-            final_coords.append((g - eff_flue/2 - r_ft, g - eff_flue/2))
-            final_coords.append((g + eff_flue/2, g + eff_flue/2 + r_ft))
-            curr = g + eff_flue/2 + r_ft + best_aisle
-        for _ in range(best_n_db):
-            final_coords.append((curr, curr + r_ft))
-            final_coords.append((curr + r_ft + f_ft, curr + r_ft * 2 + f_ft))
-            curr += (r_ft * 2 + f_ft + best_aisle)
+    # Final Coordinate Generation
+    def get_coords(length_limit):
+        coords = []
+        grid = np.arange(0, length_limit + 1, (col_y if orientation == "Horizontal" else col_x))
+        for g in grid:
+            if use_single_anchor:
+                coords.append((g - r_ft/2, g + r_ft/2))
+                curr = g + r_ft/2 + best_aisle
+            else:
+                coords.append((g - eff_flue/2 - r_ft, g - eff_flue/2))
+                coords.append((g + eff_flue/2, g + eff_flue/2 + r_ft))
+                curr = g + eff_flue/2 + r_ft + best_aisle
+            for _ in range(best_n_db):
+                coords.append((curr, curr + r_ft))
+                coords.append((curr + r_ft + f_ft, curr + r_ft * 2 + f_ft))
+                curr += (r_ft * 2 + f_ft + best_aisle)
+        return list(set(coords))
 
-    low_b, high_b = (r_min_y if orientation == "Horizontal" else r_min_x), (r_max_y if orientation == "Horizontal" else r_max_x)
-    unique_final = sorted(list(set([r for r in final_coords if r[0] >= low_b and r[1] <= high_b])))
+    r_min_x, r_max_x = max(sb_depth if sb_l else 0, rt_val_l), b_l - max(sb_depth if sb_r else 0, rt_val_r)
+    r_min_y, r_max_y = max(sb_depth if sb_b else 0, rt_val_b), b_w - max(sb_depth if sb_t else 0, rt_val_t)
+    
+    building_coords = get_coords(b_w if orientation == "Horizontal" else b_l)
+    unique_final = sorted([r for r in building_coords if r[0] >= (r_min_y if orientation == "Horizontal" else r_min_x) and r[1] <= (r_max_y if orientation == "Horizontal" else r_max_x)])
 
     # --- PLOTS ---
     st.subheader("Building View")
     fig = go.Figure()
     fig.add_shape(type="rect", x0=0, y0=0, x1=b_l, y1=b_w, line=dict(color="black", width=3))
+    
     sb_c = "rgba(255, 165, 0, 0.3)"
     if sb_l: fig.add_shape(type="rect", x0=0, y0=0, x1=sb_depth, y1=b_w, fillcolor=sb_c, line_width=0)
     if sb_r: fig.add_shape(type="rect", x0=b_l-sb_depth, y0=0, x1=b_l, y1=b_w, fillcolor=sb_c, line_width=0)
     if sb_t: fig.add_shape(type="rect", x0=0, y0=b_w-sb_depth, x1=b_l, y1=b_w, fillcolor=sb_c, line_width=0)
     if sb_b: fig.add_shape(type="rect", x0=0, y0=0, x1=b_l, y1=sb_depth, fillcolor=sb_c, line_width=0)
     fig.add_shape(type="rect", x0=rt_val_l, y0=rt_val_b, x1=b_l-rt_val_r, y1=b_w-rt_val_t, line=dict(color="grey", dash="dot", width=2))
+
     for r in unique_final:
-        f_x0, f_x1 = (r_min_x, r_max_x) if orientation == "Horizontal" else (r[0], r[1])
-        f_y0, f_y1 = (r[0], r[1]) if orientation == "Horizontal" else (r_min_y, r_max_y)
-        fig.add_shape(type="rect", x0=f_x0, y0=f_y0, x1=f_x1, y1=f_y1, fillcolor="purple", opacity=0.4, line_width=1)
+        x0, x1 = (r_min_x, r_max_x) if orientation == "Horizontal" else (r[0], r[1])
+        y0, y1 = (r[0], r[1]) if orientation == "Horizontal" else (r_min_y, r_max_y)
+        fig.add_shape(type="rect", x0=x0, y0=y0, x1=x1, y1=y1, fillcolor="purple", opacity=0.4, line_width=1)
+
     for x in np.arange(0, b_l + 1, col_x):
         for y in np.arange(0, b_w + 1, col_y):
             in_sb = (sb_l and x < sb_depth) or (sb_r and x > b_l-sb_depth) or (sb_b and y < sb_depth) or (sb_t and y > b_w-sb_depth)
@@ -172,66 +159,61 @@ with col_main:
     fig.update_layout(width=800, height=400, xaxis=dict(range=[-10, b_l+10], scaleanchor="y"), yaxis=dict(range=[-10, b_w+10]))
     st.plotly_chart(fig)
 
+    
+
     st.subheader("Engineering Pattern Detail")
     fig2 = go.Figure()
     for x in [0, col_x, col_x*2]:
         for y in [0, col_y, col_y*2]:
             fig2.add_shape(type="rect", x0=x-col_w_ft/2, y0=y-col_d_ft/2, x1=x+col_w_ft/2, y1=y+col_d_ft/2, fillcolor="red")
-    for g in [0, col_x, col_x*2]:
-        if use_single_anchor:
-            p_x0, p_y0 = (g-r_ft/2, 0) if orientation=="Vertical" else (0, g-r_ft/2)
-            p_x1, p_y1 = (g+r_ft/2, col_y*2) if orientation=="Vertical" else (col_x*2, g+r_ft/2)
-            fig2.add_shape(type="rect", x0=p_x0, y0=p_y0, x1=p_x1, y1=p_y1, fillcolor="purple", opacity=0.3)
-            curr = g + r_ft/2 + best_aisle
-        else:
-            if orientation == "Vertical":
-                fig2.add_shape(type="rect", x0=g-eff_flue/2-r_ft, y0=0, x1=g-eff_flue/2, y1=col_y*2, fillcolor="purple", opacity=0.3)
-                fig2.add_shape(type="rect", x0=g+eff_flue/2, y0=0, x1=g+eff_flue/2+r_ft, y1=col_y*2, fillcolor="purple", opacity=0.3)
-            else:
-                fig2.add_shape(type="rect", x0=0, y0=g-eff_flue/2-r_ft, x1=col_x*2, y1=g-eff_flue/2, fillcolor="purple", opacity=0.3)
-                fig2.add_shape(type="rect", x0=0, y0=g+eff_flue/2, x1=col_x*2, y1=g+eff_flue/2+r_ft, fillcolor="purple", opacity=0.3)
-            curr = g + eff_flue/2 + r_ft + best_aisle
-        for _ in range(best_n_db):
-            if orientation == "Vertical":
-                fig2.add_shape(type="rect", x0=curr, y0=0, x1=curr+r_ft, y1=col_y*2, fillcolor="purple", opacity=0.3)
-                fig2.add_shape(type="rect", x0=curr+r_ft+f_ft, y0=0, x1=curr+r_ft*2+f_ft, y1=col_y*2, fillcolor="purple", opacity=0.3)
-            else:
-                fig2.add_shape(type="rect", x0=0, y0=curr, x1=col_x*2, y1=curr+r_ft, fillcolor="purple", opacity=0.3)
-                fig2.add_shape(type="rect", x0=0, y0=curr+r_ft+f_ft, x1=col_x*2, y1=curr+r_ft*2+f_ft, fillcolor="purple", opacity=0.3)
-            curr += (r_ft * 2 + f_ft + best_aisle)
+    
+    pattern_coords = get_coords(col_y*2 if orientation == "Horizontal" else col_x*2)
+    for r in pattern_coords:
+        if r[0] >= 0 and r[1] <= (col_y*2 if orientation == "Horizontal" else col_x*2):
+            px0, px1 = (0, col_x*2) if orientation == "Horizontal" else (r[0], r[1])
+            py0, py1 = (r[0], r[1]) if orientation == "Horizontal" else (0, col_y*2)
+            fig2.add_shape(type="rect", x0=px0, y0=py0, x1=px1, y1=py1, fillcolor="purple", opacity=0.3)
     fig2.update_layout(width=800, height=450, xaxis=dict(range=[-10, col_x*2+10], scaleanchor="y"), yaxis=dict(range=[-10, col_y*2+10]))
     st.plotly_chart(fig2)
 
-# --- 2. FINAL RECEIPT LOGIC ---
-b_sf = b_l * b_w
-b_cf = b_sf * clear_ht
+    
+
+# --- 2. FINAL CALCULATIONS & RECEIPT ---
+b_sf, b_cf = b_l * b_w, b_l * b_w * clear_ht
 r_len_v = (r_max_x - r_min_x if orientation == "Horizontal" else r_max_y - r_min_y)
 rack_sf = len(unique_final) * r_ft * r_len_v
 rack_cf = rack_sf * clear_ht
-util = (rack_cf / b_cf) * 100 if b_cf > 0 else 0
+build_util = (rack_cf / b_cf) * 100 if b_cf > 0 else 0
+
+# PATTERN UTILIZATION MATH
+pattern_bay_area = col_x * col_y
+rows_in_cell = (1 if use_single_anchor else 2) + (best_n_db * 2)
+p_rack_sf = rows_in_cell * r_ft * (col_x if orientation == "Horizontal" else col_y)
+pattern_util = (p_rack_sf / pattern_bay_area) * 100
 
 receipt_html = (
     f'<div class="fixed-receipt-sidebar">'
     f'<div style="font-weight: bold; margin-bottom: 2px;">BUILDING METRICS</div>'
-    f'<div style="color: #888; font-size: 0.85em; font-style: italic;">{b_l:,.1f}ft L × {b_w:,.1f}ft W</div>'
+    f'<div style="color: #888; font-size: 0.85em; font-style: italic;">{b_l:,.0f}ft L × {b_w:,.0f}ft W</div>'
     f'<div style="font-weight: bold;">Area: {b_sf:,.0f} SF</div>'
-    f'<div style="color: #888; font-size: 0.85em; font-style: italic; margin-top: 4px;">{b_sf:,.0f} SF × {clear_ht:,.1f}ft H</div>'
-    f'<div style="font-weight: bold;">Volume: {b_cf:,.0f} CF</div>'
     f'<div style="border-top: 1px dashed #333; margin: 12px 0;"></div>'
-    f'<div style="font-weight: bold; margin-bottom: 2px;">AISLE CONFIGURATION</div>'
-    f'<div style="color: #888; font-size: 0.85em; font-style: italic;">Bay ({bay_span:,.1f}ft) - Anchor ({"Single" if use_single_anchor else "Double"})</div>'
-    f'<div style="font-weight: bold;">Uniform Aisle: {best_aisle:.2f} ft</div>'
-    f'<div style="color: #888; font-size: 0.85em; font-style: italic; margin-top: 4px;">Min Required: {min_aisle:,.1f} ft</div>'
-    f'<div style="border-top: 1px dashed #333; margin: 12px 0;"></div>'
-    f'<div style="font-weight: bold; margin-bottom: 2px;">RACKING CALCULATIONS</div>'
-    f'<div style="color: #888; font-size: 0.85em; font-style: italic;">{len(unique_final)} rows × {r_ft:,.2f}ft D × {r_len_v:,.1f}ft L</div>'
-    f'<div style="font-weight: bold;">Rack Footprint: {rack_sf:,.0f} SF</div>'
-    f'<div style="color: #888; font-size: 0.85em; font-style: italic; margin-top: 4px;">{rack_sf:,.0f} SF × {clear_ht:,.1f}ft H</div>'
+    f'<div style="font-weight: bold; margin-bottom: 2px;">RACKING DATA</div>'
+    f'<div style="color: #888; font-size: 0.85em; font-style: italic;">{len(unique_final)} rows × {r_ft:,.2f}ft D</div>'
     f'<div style="font-weight: bold;">Rack Cube: {rack_cf:,.0f} CF</div>'
     f'<div style="border-top: 1px dashed #333; margin: 12px 0;"></div>'
-    f'<div style="font-weight: bold; margin-bottom: 2px;">TOTAL CUBE UTILIZATION</div>'
-    f'<div style="color: #888; font-size: 0.85em; font-style: italic;">{rack_cf:,.0f} CF / {b_cf:,.0f} CF</div>'
-    f'<div style="font-weight: bold; color: #6a0dad; font-size: 1.2em;">{util:.1f}% Utilization</div>'
+    
+    f'<div style="background-color: #f8f9fa; padding: 10px; border: 1px solid #343a40; margin-top: 10px;">'
+    f'<div style="font-weight: bold; font-size: 0.9em; color: #343a40;">BUILDING UTILIZATION</div>'
+    f'<div style="color: #666; font-size: 0.75em; font-style: italic;">Entire footprint efficiency</div>'
+    f'<div style="font-size: 1.4em; font-weight: bold; color: #343a40;">{build_util:.1f}%</div>'
+    f'</div>'
+    
+    f'<div style="background-color: #f0f9ff; padding: 10px; border: 1px solid #007bff; margin-top: 10px;">'
+    f'<div style="font-weight: bold; font-size: 0.9em; color: #007bff;">PATTERN UTILIZATION</div>'
+    f'<div style="color: #666; font-size: 0.75em; font-style: italic;">Efficiency of 1 structural bay ({col_x}x{col_y})</div>'
+    f'<div style="font-size: 1.4em; font-weight: bold; color: #007bff;">{pattern_util:.1f}%</div>'
+    f'</div>'
+    
     f'<div style="background-color: #f9f0ff; padding: 10px; border: 1px solid #6a0dad; margin-top: 12px;">'
     f'<div style="font-weight: bold; font-size: 0.9em;">FINAL STORAGE CUBE</div>'
     f'<div style="font-size: 1.4em; font-weight: bold; color: #6a0dad;">{rack_cf:,.0f} CF</div>'
