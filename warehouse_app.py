@@ -5,22 +5,42 @@ import plotly.graph_objects as go
 # --- PAGE CONFIG ---
 st.set_page_config(page_title="Warehouse Cube Optimizer", layout="wide")
 
-# --- CSS: INJECT STYLES ---
+# --- CSS: RESPONSIVE FIXED SIDEBAR ---
 st.markdown("""
     <style>
+    /* Main Layout */
     .block-container { 
         max-width: 100% !important; padding-top: 2rem; 
         margin-left: 0 !important; margin-right: 0 !important; 
         padding-left: 50px !important; 
     }
-    [data-testid="column"]:nth-child(1) { min-width: 850px !important; max-width: 850px !important; }
     
+    /* Desktop Sidebar Style */
     .fixed-receipt-sidebar { 
         position: fixed; top: 80px; right: 20px; width: 320px; 
         background-color: white; border: 2px solid #333; padding: 15px; 
         box-shadow: 8px 8px 0px #ddd; font-family: 'Courier New', Courier, monospace; 
         z-index: 9999; color: black; max-height: 90vh; overflow-y: auto;
     }
+
+    /* Mobile/Small Screen Override */
+    @media (max-width: 1200px) {
+        .fixed-receipt-sidebar { 
+            position: static; /* Moves it to the bottom of the page flow */
+            width: 100%; 
+            margin-top: 40px; 
+            box-shadow: none;
+            border-top: 4px solid #6a0dad;
+        }
+        .block-container {
+            padding-left: 15px !important;
+            padding-right: 15px !important;
+        }
+        [data-testid="column"]:nth-child(1) { 
+            min-width: 100% !important; 
+        }
+    }
+
     [data-testid="stSidebar"] { display: none; }
     </style>
     """, unsafe_allow_html=True)
@@ -85,7 +105,6 @@ with col_main:
     def solve_bay(strat):
         w_anchor = r_ft if strat == "Single" else (r_ft * 2 + eff_flue)
         usable = bay_span - w_anchor
-        # Calculate max possible doubles while keeping aisle >= min_aisle
         n_db = int(usable / ((r_ft*2) + f_ft + min_aisle))
         rem = usable - (n_db * ((r_ft*2) + f_ft))
         u_aisle = rem / (n_db + 1)
@@ -95,7 +114,6 @@ with col_main:
             u_aisle = rem / (n_db + 1)
         return (2 if strat == "Double" else 1) + (n_db * 2), u_aisle, n_db
 
-    # Strategy duel
     if allow_single_aisles and col_dim <= r_ft:
         c_db, a_db, n_db_val = solve_bay("Double")
         c_sg, a_sg, n_sg_val = solve_bay("Single")
@@ -113,7 +131,7 @@ with col_main:
     r_min_y = max(sb_depth if sb_b else 0, rt_val_b)
     r_max_y = b_w - max(sb_depth if sb_t else 0, rt_val_t)
     
-    # Generate Coordinates
+    # Layout Generation
     final_coords = []
     grid = np.arange(0, (b_w if orientation == "Horizontal" else b_l) + 1, (col_y if orientation == "Horizontal" else col_x))
     for g in grid:
@@ -143,14 +161,9 @@ with col_main:
     if sb_b: fig.add_shape(type="rect", x0=0, y0=0, x1=b_l, y1=sb_depth, fillcolor=sb_c, line_width=0)
     fig.add_shape(type="rect", x0=rt_val_l, y0=rt_val_b, x1=b_l-rt_val_r, y1=b_w-rt_val_t, line=dict(color="grey", dash="dot", width=2))
     for r in unique_final:
-        if orientation == "Horizontal":
-            fig1_x0, fig1_x1 = r_min_x, r_max_x
-            fig1_y0, fig1_y1 = r[0], r[1]
-        else:
-            fig1_x0, fig1_x1 = r[0], r[1]
-            fig1_y0, fig1_y1 = r_min_y, r_max_y
-        fig.add_shape(type="rect", x0=fig1_x0, y0=fig1_y0, x1=fig1_x1, y1=fig1_y1, fillcolor="purple", opacity=0.4, line_width=1)
-
+        f_x0, f_x1 = (r_min_x, r_max_x) if orientation == "Horizontal" else (r[0], r[1])
+        f_y0, f_y1 = (r[0], r[1]) if orientation == "Horizontal" else (r_min_y, r_max_y)
+        fig.add_shape(type="rect", x0=f_x0, y0=f_y0, x1=f_x1, y1=f_y1, fillcolor="purple", opacity=0.4, line_width=1)
     for x in np.arange(0, b_l + 1, col_x):
         for y in np.arange(0, b_w + 1, col_y):
             in_sb = (sb_l and x < sb_depth) or (sb_r and x > b_l-sb_depth) or (sb_b and y < sb_depth) or (sb_t and y > b_w-sb_depth)
@@ -159,15 +172,44 @@ with col_main:
     fig.update_layout(width=800, height=400, xaxis=dict(range=[-10, b_l+10], scaleanchor="y"), yaxis=dict(range=[-10, b_w+10]))
     st.plotly_chart(fig)
 
-# --- 2. RECEIPT CALCULATION ---
+    st.subheader("Engineering Pattern Detail")
+    fig2 = go.Figure()
+    for x in [0, col_x, col_x*2]:
+        for y in [0, col_y, col_y*2]:
+            fig2.add_shape(type="rect", x0=x-col_w_ft/2, y0=y-col_d_ft/2, x1=x+col_w_ft/2, y1=y+col_d_ft/2, fillcolor="red")
+    for g in [0, col_x, col_x*2]:
+        if use_single_anchor:
+            p_x0, p_y0 = (g-r_ft/2, 0) if orientation=="Vertical" else (0, g-r_ft/2)
+            p_x1, p_y1 = (g+r_ft/2, col_y*2) if orientation=="Vertical" else (col_x*2, g+r_ft/2)
+            fig2.add_shape(type="rect", x0=p_x0, y0=p_y0, x1=p_x1, y1=p_y1, fillcolor="purple", opacity=0.3)
+            curr = g + r_ft/2 + best_aisle
+        else:
+            if orientation == "Vertical":
+                fig2.add_shape(type="rect", x0=g-eff_flue/2-r_ft, y0=0, x1=g-eff_flue/2, y1=col_y*2, fillcolor="purple", opacity=0.3)
+                fig2.add_shape(type="rect", x0=g+eff_flue/2, y0=0, x1=g+eff_flue/2+r_ft, y1=col_y*2, fillcolor="purple", opacity=0.3)
+            else:
+                fig2.add_shape(type="rect", x0=0, y0=g-eff_flue/2-r_ft, x1=col_x*2, y1=g-eff_flue/2, fillcolor="purple", opacity=0.3)
+                fig2.add_shape(type="rect", x0=0, y0=g+eff_flue/2, x1=col_x*2, y1=g+eff_flue/2+r_ft, fillcolor="purple", opacity=0.3)
+            curr = g + eff_flue/2 + r_ft + best_aisle
+        for _ in range(best_n_db):
+            if orientation == "Vertical":
+                fig2.add_shape(type="rect", x0=curr, y0=0, x1=curr+r_ft, y1=col_y*2, fillcolor="purple", opacity=0.3)
+                fig2.add_shape(type="rect", x0=curr+r_ft+f_ft, y0=0, x1=curr+r_ft*2+f_ft, y1=col_y*2, fillcolor="purple", opacity=0.3)
+            else:
+                fig2.add_shape(type="rect", x0=0, y0=curr, x1=col_x*2, y1=curr+r_ft, fillcolor="purple", opacity=0.3)
+                fig2.add_shape(type="rect", x0=0, y0=curr+r_ft+f_ft, x1=col_x*2, y1=curr+r_ft*2+f_ft, fillcolor="purple", opacity=0.3)
+            curr += (r_ft * 2 + f_ft + best_aisle)
+    fig2.update_layout(width=800, height=450, xaxis=dict(range=[-10, col_x*2+10], scaleanchor="y"), yaxis=dict(range=[-10, col_y*2+10]))
+    st.plotly_chart(fig2)
+
+# --- 2. FINAL RECEIPT LOGIC ---
 b_sf = b_l * b_w
 b_cf = b_sf * clear_ht
-r_len_val = (r_max_x - r_min_x if orientation == "Horizontal" else r_max_y - r_min_y)
-rack_sf = len(unique_final) * r_ft * r_len_val
+r_len_v = (r_max_x - r_min_x if orientation == "Horizontal" else r_max_y - r_min_y)
+rack_sf = len(unique_final) * r_ft * r_len_v
 rack_cf = rack_sf * clear_ht
 util = (rack_cf / b_cf) * 100 if b_cf > 0 else 0
 
-# Use a single continuous string without line breaks to force markdown to render HTML correctly
 receipt_html = (
     f'<div class="fixed-receipt-sidebar">'
     f'<div style="font-weight: bold; margin-bottom: 2px;">BUILDING METRICS</div>'
@@ -182,7 +224,7 @@ receipt_html = (
     f'<div style="color: #888; font-size: 0.85em; font-style: italic; margin-top: 4px;">Min Required: {min_aisle:,.1f} ft</div>'
     f'<div style="border-top: 1px dashed #333; margin: 12px 0;"></div>'
     f'<div style="font-weight: bold; margin-bottom: 2px;">RACKING CALCULATIONS</div>'
-    f'<div style="color: #888; font-size: 0.85em; font-style: italic;">{len(unique_final)} rows × {r_ft:,.2f}ft D × {r_len_val:,.1f}ft L</div>'
+    f'<div style="color: #888; font-size: 0.85em; font-style: italic;">{len(unique_final)} rows × {r_ft:,.2f}ft D × {r_len_v:,.1f}ft L</div>'
     f'<div style="font-weight: bold;">Rack Footprint: {rack_sf:,.0f} SF</div>'
     f'<div style="color: #888; font-size: 0.85em; font-style: italic; margin-top: 4px;">{rack_sf:,.0f} SF × {clear_ht:,.1f}ft H</div>'
     f'<div style="font-weight: bold;">Rack Cube: {rack_cf:,.0f} CF</div>'
@@ -193,8 +235,7 @@ receipt_html = (
     f'<div style="background-color: #f9f0ff; padding: 10px; border: 1px solid #6a0dad; margin-top: 12px;">'
     f'<div style="font-weight: bold; font-size: 0.9em;">FINAL STORAGE CUBE</div>'
     f'<div style="font-size: 1.4em; font-weight: bold; color: #6a0dad;">{rack_cf:,.0f} CF</div>'
-    f'</div>'
-    f'</div>'
+    f'</div></div>'
 )
 
 st.markdown(receipt_html, unsafe_allow_html=True)
