@@ -54,7 +54,7 @@ def update_sb_depth():
         if st.session_state.sb_depth == 0.0:
             st.session_state.sb_depth = (ref_span * 1.5) if ref_span > 0 else 60.0
 
-# --- CSS: THEME & UI ---
+# --- CSS: THEME, DROPDOWN & RESPONSIVE SIDEBAR ---
 st.markdown("""
     <style>
     @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700;800;900&family=Inter:wght@400;700&display=swap');
@@ -70,8 +70,10 @@ st.markdown("""
     [data-testid="stTooltipIcon"] svg { fill: #00f3ff !important; }
     div[data-testid="stTooltipContent"] { background-color: #1a1a1a !important; color: #ffffff !important; border: 1px solid #00f3ff !important; padding: 10px !important; }
 
+    /* Dropdown Chevron White */
     div[data-baseweb="select"] svg { fill: #ffffff !important; }
 
+    /* Static White Border for Inputs and Selectbox */
     div[data-baseweb="input"] > div, .stNumberInput input, .stTextInput input, div[data-baseweb="select"] > div { 
         background-color: #1a1a1a !important; color: #ffffff !important; border: 1px solid #ffffff !important; font-family: 'JetBrains Mono', monospace !important; 
     }
@@ -90,11 +92,17 @@ st.markdown("""
     .terminal-table th { color: #00f3ff; font-size: 0.75em; text-transform: uppercase; font-weight: 900; text-align: left; padding: 10px; border-bottom: 1px dashed #333; }
     .terminal-table td { color: #ffffff; font-size: 0.85em; padding: 10px; border-bottom: 1px solid #1a1a1a; }
 
-    .fixed-receipt-sidebar { position: fixed; top: 80px; right: 20px; width: 325px; background-color: #000000; border: 2px solid #ffffff; padding: 20px; box-shadow: 10px 10px 0px #ff00ff; z-index: 9999; }
+    /* Fixed Receipt: Desktop vs Mobile Snapping */
+    .fixed-receipt-sidebar { background-color: #000000; border: 2px solid #ffffff; padding: 20px; box-shadow: 10px 10px 0px #ff00ff; z-index: 9999; }
+    @media (min-width: 1024px) {
+        .fixed-receipt-sidebar { position: fixed; top: 80px; right: 20px; width: 325px; }
+    }
+    @media (max-width: 1023px) {
+        .fixed-receipt-sidebar { position: relative; top: 0; right: 0; width: 100%; margin: 20px 0; }
+    }
+
     .metric-card { background-color: #000000; border: 1px solid #00ff00; padding: 12px; margin-top: 15px; box-shadow: 5px 5px 0px #00ff00; }
-    
     .warning-text { color: #ff00ff; font-family: 'JetBrains Mono', monospace; font-size: 0.75em; font-weight: 900; margin-bottom: 5px; text-transform: uppercase; }
-    
     [data-testid="stSidebar"] { display: none; }
     </style>
     """, unsafe_allow_html=True)
@@ -275,11 +283,10 @@ with col_main:
     st.markdown('<div id="PRECISION_SAVE_ZONE">', unsafe_allow_html=True)
     if st.button("SAVE SNAPSHOT"):
         if ready:
-            st.session_state.history.append({"NAME": scen_name if scen_name else f"PLAN_{len(st.session_state.history)+1}", "AISLE": aisle_val, "BUILD": util_val, "PATTERN": f"{p_util:.1f}%", "CUBE": f"{rack_cf:,.0f}"})
+            st.session_state.history.append({"NAME": scen_name if scen_name else f"PLAN_{len(st.session_state.history)+1}", "AISLE": aisle_val, "BUILDING": util_val, "PATTERN": f"{p_util:.1f}%", "CUBE": f"{rack_cf:,.0f}"})
     st.markdown('</div>', unsafe_allow_html=True)
     if st.session_state.history:
-        # THE UPDATE: Title changed from BUILD % to BUILDING %
         h = "<thead><tr><th>NAME</th><th>AISLE</th><th>BUILDING %</th><th>PATTERN %</th><th>CUBE</th></tr></thead>"
-        rows = "".join([f'<tr><td>{e["NAME"]}</td><td>{e["AISLE"]}</td><td>{e["BUILD"]}</td><td>{e["PATTERN"]}</td><td>{e["CUBE"]}</td></tr>' for e in st.session_state.history])
+        rows = "".join([f'<tr><td>{e["NAME"]}</td><td>{e["AISLE"]}</td><td>{e["BUILDING"]}</td><td>{e["PATTERN"]}</td><td>{e["CUBE"]}</td></tr>' for e in st.session_state.history])
         st.markdown(f'<table class="terminal-table">{h}<tbody>{rows}</tbody></table>', unsafe_allow_html=True)
         if st.button("CLEAR LOG"): st.session_state.history = []; st.rerun()
