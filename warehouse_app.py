@@ -81,27 +81,27 @@ with col_main:
 
     st.header("1. BUILDING DIMENSIONS")
     b_c = st.columns(3)
-    b_l = b_c[0].number_input("Length (ft)", key="b_l", step=1.0, help="The total exterior wall length of your warehouse.")
-    b_w = b_c[1].number_input("Width (ft)", key="b_w", step=1.0, help="The narrow way across the warehouse floor.")
-    clear_ht = b_c[2].number_input("Clear Height (ft)", key="clear_ht", step=1.0, help="Vertical distance from floor to ceiling obstructions.")
+    b_l = b_c[0].number_input("Length (ft)", key="b_l", step=1.0, help="The total length of the facility.")
+    b_w = b_c[1].number_input("Width (ft)", key="b_w", step=1.0, help="The total width of the facility.")
+    clear_ht = b_c[2].number_input("Clear Height (ft)", key="clear_ht", step=1.0, help="Lowest ceiling obstruction.")
     st.markdown('<div class="cyan-divider"></div>', unsafe_allow_html=True)
 
     st.header("2. CLEAR ZONES")
     sb_checks = st.columns(4)
-    sb_l = sb_checks[0].checkbox("Speed Bay L", key="sb_l", on_change=update_sb_depth, help="Carve out traffic room on the left wall.")
-    sb_r = sb_checks[1].checkbox("Speed Bay R", key="sb_r", on_change=update_sb_depth, help="Carve out traffic room on the right wall.")
-    sb_t = sb_checks[2].checkbox("Speed Bay T", key="sb_t", on_change=update_sb_depth, help="Carve out traffic room on the top wall.")
-    sb_b = sb_checks[3].checkbox("Speed Bay B", key="sb_b", on_change=update_sb_depth, help="Carve out traffic room on the bottom wall.")
+    sb_l = sb_checks[0].checkbox("Speed Bay L", key="sb_l", on_change=update_sb_depth, help="Lane on the left wall.")
+    sb_r = sb_checks[1].checkbox("Speed Bay R", key="sb_r", on_change=update_sb_depth, help="Lane on the right wall.")
+    sb_t = sb_checks[2].checkbox("Speed Bay T", key="sb_t", on_change=update_sb_depth, help="Lane on the top wall.")
+    sb_b = sb_checks[3].checkbox("Speed Bay B", key="sb_b", on_change=update_sb_depth, help="Lane on the bottom wall.")
     
     if any([st.session_state.sb_l, st.session_state.sb_r, st.session_state.sb_t, st.session_state.sb_b]):
-        st.columns([1, 3])[0].number_input("Speed Bay Depth (ft)", key="sb_depth", step=1.0, help="Uniform depth for those staging lanes.")
+        st.columns([1, 3])[0].number_input("Speed Bay Depth (ft)", key="sb_depth", step=1.0, help="Lane depth.")
     
     st.subheader("RACETRACK")
     rt_c = st.columns(4)
-    rt_l = rt_c[0].number_input("L Buffer", key="rt_l", step=1.0, help="Safety gap from the racks to the left wall.")
-    rt_r = rt_c[1].number_input("R Buffer", key="rt_r", step=1.0, help="Safety gap from the racks to the right wall.")
-    rt_t = rt_c[2].number_input("T Buffer", key="rt_t", step=1.0, help="Safety gap from the racks to the top wall.")
-    rt_b = rt_c[3].number_input("B Buffer", key="rt_b", step=1.0, help="Safety gap from the racks to the bottom wall.")
+    rt_l = rt_c[0].number_input("L Buffer", key="rt_l", step=1.0, help="Left clearance.")
+    rt_r = rt_c[1].number_input("R Buffer", key="rt_r", step=1.0, help="Right clearance.")
+    rt_t = rt_c[2].number_input("T Buffer", key="rt_t", step=1.0, help="Top clearance.")
+    rt_b = rt_c[3].number_input("B Buffer", key="rt_b", step=1.0, help="Bottom clearance.")
     
     rt_btns = st.columns([1.5, 1.5, 5])
     rt_btns[0].button("APPLY L. TO ALL", on_click=apply_l_to_all)
@@ -110,18 +110,18 @@ with col_main:
 
     st.header("3. COLUMN SPECIFICATIONS")
     c_c = st.columns(4)
-    col_x = c_c[0].number_input("X Span (ft)", key="col_x", step=1.0, help="Distance between column centers horizontally.")
-    col_y = c_c[1].number_input("Y Span (ft)", key="col_y", step=1.0, help="Distance between column centers vertically.")
-    col_w_ft, col_d_ft = c_c[2].number_input("Col W (in)", key="col_w", step=1.0, help="Width of the column post.")/12, c_c[3].number_input("Col D (in)", key="col_d", step=1.0, help="Depth of the column post.")/12
+    col_x = c_c[0].number_input("X Span (ft)", key="col_x", step=1.0, help="Horizontal center-to-center.")
+    col_y = c_c[1].number_input("Y Span (ft)", key="col_y", step=1.0, help="Vertical center-to-center.")
+    col_w_ft, col_d_ft = c_c[2].number_input("Col W (in)", key="col_w", step=1.0, help="Column width.")/12, c_c[3].number_input("Col D (in)", key="col_d", step=1.0, help="Column depth.")/12
     st.markdown('<div class="cyan-divider"></div>', unsafe_allow_html=True)
 
     st.header("4. RACKING OPTIMIZATION")
     r_c = st.columns(4)
-    orient = r_c[0].selectbox("Orientation", ["Vertical", "Horizontal"], key="orient", help="Which direction the rows travel.")
-    r_in = r_c[1].number_input("Rack D (in)", key="r_in", step=1.0, help="Depth of one rack frame.")
-    f_in = r_c[2].number_input("Flue (in)", key="f_in", step=1.0, help="Gap between back-to-back rack rows.")
-    min_a = r_c[3].number_input("Min Aisle (ft)", key="min_a", step=1.0, help="Forklift turning room.")
-    allow_single = st.checkbox("Allow single aisles", key="single", help="Distribute singles and doubles to maximize density and center aisles.")
+    orient = r_c[0].selectbox("Orientation", ["Vertical", "Horizontal"], key="orient", help="Up-down or side-to-side.")
+    r_in = r_c[1].number_input("Rack D (in)", key="r_in", step=1.0, help="Rack frame depth.")
+    f_in = r_c[2].number_input("Flue (in)", key="f_in", step=1.0, help="Back-to-back gap.")
+    min_a = r_c[3].number_input("Min Aisle (ft)", key="min_a", step=1.0, help="Forklift path width.")
+    allow_single = st.checkbox("Allow single aisles", key="single", help="Maximize density with singles/doubles.")
     st.markdown('<div class="cyan-divider"></div>', unsafe_allow_html=True)
 
     # --- MATH ENGINE ---
@@ -138,17 +138,22 @@ with col_main:
             vis_off_x, vis_off_y = wall_l + (slack_x / 2), wall_b + (slack_y / 2)
 
             def get_coords(limit, grid_start, step):
+                # FIX: Initialize default return values to prevent UnboundLocalError
                 coords = []
+                distributed_aisle = min_a 
+                
+                # Safety check: if start is beyond limit, return early
+                if grid_start >= limit:
+                    return coords, distributed_aisle
+                    
                 grid = np.arange(grid_start, limit + 0.1, step)
                 col_dim = col_d_ft if orient == "Horizontal" else col_w_ft
                 eff_flue = max(f_ft, col_dim)
 
                 for g in grid:
                     bay_end = g + step
-                    # Phase 1: Determine Count & Types for this bay
-                    bay_units = [] # List of rack depths (r_ft or r_ft*2+f_ft)
+                    bay_units = [] 
                     
-                    # Add base column-rack
                     if allow_single:
                         bay_units.append(("S", r_ft))
                         remaining = step - (r_ft + min_a)
@@ -156,7 +161,6 @@ with col_main:
                         bay_units.append(("D", r_ft * 2 + eff_flue))
                         remaining = step - (r_ft * 2 + eff_flue + min_a)
                     
-                    # Fill remainder with doubles, then a single if room
                     while remaining >= (r_ft * 2 + f_ft + min_a):
                         bay_units.append(("D", r_ft * 2 + f_ft))
                         remaining -= (r_ft * 2 + f_ft + min_a)
@@ -164,15 +168,13 @@ with col_main:
                         bay_units.append(("S", r_ft))
                         remaining -= (r_ft + min_a)
                     
-                    # Phase 2: Distribute Aisles Evenly
-                    num_aisles = len(bay_units) # One aisle after every unit
+                    num_aisles = len(bay_units)
                     distributed_aisle = min_a + (remaining / num_aisles) if num_aisles > 0 else min_a
                     
-                    # Phase 3: Plot Coords
                     ptr = g
-                    for i, (type, depth) in enumerate(bay_units):
-                        if i == 0: # Handle first unit center-aligned to column
-                            if type == "S":
+                    for i, (utype, depth) in enumerate(bay_units):
+                        if i == 0:
+                            if utype == "S":
                                 coords.append((ptr - r_ft/2, ptr + r_ft/2))
                                 ptr += (r_ft/2 + distributed_aisle)
                             else:
@@ -180,7 +182,7 @@ with col_main:
                                 coords.append((ptr + eff_flue/2, ptr + eff_flue/2 + r_ft))
                                 ptr += (eff_flue/2 + r_ft + distributed_aisle)
                         else:
-                            if type == "S":
+                            if utype == "S":
                                 coords.append((ptr, ptr + r_ft))
                                 ptr += (r_ft + distributed_aisle)
                             else:
@@ -190,7 +192,7 @@ with col_main:
                 
                 return list(set(coords)), distributed_aisle
 
-            raw_coords, final_aisle_val = get_coords(wall_t if orient == "Horizontal" else wall_r, vis_off_y if orient == "Horizontal" else vis_off_x, col_y if orient == "Horizontal" else col_x)
+            raw_coords, best_aisle = get_coords(wall_t if orient == "Horizontal" else wall_r, vis_off_y if orient == "Horizontal" else vis_off_x, col_y if orient == "Horizontal" else col_x)
             r_min_x, r_max_x = max(wall_l, rt_l), min(wall_r, b_l - rt_r)
             r_min_y, r_max_y = max(wall_b, rt_b), min(wall_t, b_w - rt_t)
             unique_final = sorted([r for r in raw_coords if r[0] >= (r_min_y if orient == "Horizontal" else r_min_x) and r[1] <= (r_max_y if orient == "Horizontal" else r_max_x)])
@@ -198,9 +200,11 @@ with col_main:
             rack_cf = len(unique_final) * r_ft * (r_max_x - r_min_x if orient == "Horizontal" else r_max_y - r_min_y) * clear_ht
             build_util = (rack_cf / (b_l * b_w * clear_ht)) * 100
             
-            sample_bay_coords, _ = get_coords(vis_off_y + (col_y if orient == "Horizontal" else col_x), vis_off_y if orient == "Horizontal" else vis_off_x, col_y if orient == "Horizontal" else col_x)
+            # Pattern utility logic
+            test_lim = (vis_off_y if orient == "Horizontal" else vis_off_x) + (col_y if orient == "Horizontal" else col_x)
+            test_start = vis_off_y if orient == "Horizontal" else vis_off_x
+            sample_bay_coords, _ = get_coords(test_lim, test_start, col_y if orient == "Horizontal" else col_x)
             p_util = ((len(sample_bay_coords) * r_ft * (st.session_state.col_y if orient == "Horizontal" else st.session_state.col_x)) / (col_x * col_y)) * 100
-            best_aisle = final_aisle_val
         else: rack_cf, build_util, best_aisle, p_util, unique_final = 0, 0, 0, 0, []
     else: rack_cf, build_util, best_aisle, p_util, unique_final = 0, 0, 0, 0, []
 
@@ -209,14 +213,14 @@ with col_main:
     st.subheader("BUILDING VIEW")
     fig = go.Figure()
     fig.add_shape(type="rect", x0=0, y0=0, x1=b_l, y1=b_w, line=dict(color="#ffffff", width=2))
-    if ready:
+    if ready and avail_x > 0 and avail_y > 0:
         fig.add_shape(type="rect", x0=r_min_x, y0=r_min_y, x1=r_max_x, y1=r_max_y, line=dict(color="#00ff00", width=1.5, dash="dot"))
         for r in unique_final:
             x0, x1 = (r_min_x, r_max_x) if orient == "Horizontal" else (r[0], r[1])
             y0, y1 = (r[0], r[1]) if orient == "Horizontal" else (r_min_y, r_max_y)
             fig.add_shape(type="rect", x0=x0, y0=y0, x1=x1, y1=y1, fillcolor="#00ff00", opacity=0.3, line_width=0.5, line_color="#00ff00")
-        for x in np.arange(vis_off_x if 'vis_off_x' in locals() else 0, wall_r + 0.1, col_x):
-            for y in np.arange(vis_off_y if 'vis_off_y' in locals() else 0, wall_t + 0.1, col_y):
+        for x in np.arange(vis_off_x, wall_r + 0.1, col_x):
+            for y in np.arange(vis_off_y, wall_t + 0.1, col_y):
                 fig.add_shape(type="rect", x0=x-col_w_ft/2, y0=y-col_d_ft/2, x1=x+col_w_ft/2, y1=y+col_d_ft/2, fillcolor="rgb(255, 0, 255)")
         if sb_l: fig.add_shape(type="line", x0=wall_l, y0=0, x1=wall_l, y1=b_w, line=dict(color="#ff00ff", width=2, dash="dot"))
         if sb_r: fig.add_shape(type="line", x0=wall_r, y0=0, x1=wall_r, y1=b_w, line=dict(color="#ff00ff", width=2, dash="dot"))
@@ -262,7 +266,7 @@ with col_main: st.markdown(receipt_html, unsafe_allow_html=True)
 # --- SCENARIO LOG ---
 with col_main:
     st.header("SCENARIO_LOG")
-    scen_name = st.text_input("SCENARIO NAME", placeholder="E.G. PLAN_ALPHA", help="Identify this setup in your log.")
+    scen_name = st.text_input("SCENARIO NAME", placeholder="E.G. PLAN_ALPHA", help="Identify log.")
     st.markdown('<div id="PRECISION_SAVE_ZONE">', unsafe_allow_html=True)
     if st.button("SAVE SNAPSHOT"):
         if ready:
