@@ -3,7 +3,7 @@ import numpy as np
 import plotly.graph_objects as go
 
 # --- PAGE CONFIG ---
-st.set_page_config(page_title="Racking Layout Optimizer", layout="wide")
+st.set_page_config(page_title="Rack Optimizer", layout="wide")
 
 # --- INITIALIZE MEMORY & DEFAULTS ---
 if 'history' not in st.session_state:
@@ -61,7 +61,8 @@ st.markdown("""
     .stApp { background-color: #000000; color: #ffffff; font-family: 'Inter', sans-serif; }
     * { border-radius: 0px !important; }
     
-    h1 { color: #00f3ff !important; font-family: 'JetBrains Mono', monospace !important; font-weight: 900 !important; text-transform: uppercase; letter-spacing: -0.05em; }
+    h1 { color: #00f3ff !important; font-family: 'JetBrains Mono', monospace !important; font-weight: 900 !important; text-transform: uppercase; letter-spacing: -0.05em; margin-bottom: 0.2rem; }
+    .subtitle { color: #ffffff; font-family: 'Inter', sans-serif; font-size: 1rem; opacity: 0.8; margin-bottom: 2rem; }
     h2, h3 { color: #ffffff !important; font-family: 'JetBrains Mono', monospace !important; font-weight: 600 !important; text-transform: uppercase; letter-spacing: 0.05em; }
     
     .cyan-divider { border: none; border-top: 2px dotted #00f3ff; width: 100%; margin: 2rem 0; opacity: 0.6; }
@@ -110,7 +111,8 @@ st.markdown("""
 col_main, _ = st.columns([850, 310])
 
 with col_main:
-    st.title("RACKING_LAYOUT_OPTIMIZER")
+    st.title("RACK_OPTIMIZER")
+    st.markdown('<div class="subtitle">A high-precision structural layout tool for calculating storage density and rack layouts for fulfilment centers.</div>', unsafe_allow_html=True)
     st.button("CLEAR ALL FIELDS", on_click=handle_clear_all)
 
     st.header("1. BUILDING DIMENSIONS")
@@ -150,7 +152,7 @@ with col_main:
     col_d_ft = c_c[3].number_input("Col D (in)", key="col_d", step=1.0, help="Depth of the physical post.")/12
     st.markdown('<div class="cyan-divider"></div>', unsafe_allow_html=True)
 
-    st.header("4. RACKING OPTIMIZATION")
+    st.header("4. RACK OPTIMIZATION")
     r_c = st.columns(4)
     orient = r_c[0].selectbox("Orientation", ["Vertical", "Horizontal"], key="orient", help="Up-down or side-to-side?")
     r_in = r_c[1].number_input("Rack D (in)", key="r_in", step=1.0, help="Depth of a single rack frame.")
@@ -265,7 +267,7 @@ receipt_html = (
     f'<div style="color: #666; font-size: 0.85em; font-style: italic;">{b_l:,.0f}ft L × {b_w:,.0f}ft W</div>'
     f'<div style="font-weight: bold; color: white;">Area: {area_val} SF</div>'
     f'<div style="margin: 15px 0; border-top: 1px dashed #333;"></div>'
-    f'<div style="font-weight: 900; color: #00f3ff; font-size: 0.8em; margin-bottom: 5px; font-family: JetBrains Mono;">RACKING_DATA</div>'
+    f'<div style="font-weight: 900; color: #00f3ff; font-size: 0.8em; margin-bottom: 5px; font-family: JetBrains Mono;">RACK_DATA</div>'
     f'<div style="color: #666; font-size: 0.85em; font-style: italic;">{len(unique_final)} rows</div>'
     f'<div style="font-weight: bold; color: white;">Actual Aisle: {aisle_val}</div>'
     f'<div class="metric-card"><div style="font-weight: 900; font-size: 0.75em; color: #00ff00;">BUILDING_UTILIZATION</div><div style="font-size: 1.5em; font-weight: 900; color: #00ff00;">{util_val}</div></div>'
