@@ -112,7 +112,7 @@ col_main, _ = st.columns([850, 310])
 
 with col_main:
     st.title("RACK_OPTIMIZER")
-    st.markdown('<div class="subtitle">A high-precision structural layout tool for calculating storage density and rack layouts for fulfilment centers.</div>', unsafe_allow_html=True)
+    st.markdown('<div class="subtitle">A high-precision structural layout tool for calculating storage density and rack layouts for fulfillment centers.</div>', unsafe_allow_html=True)
     st.button("CLEAR ALL FIELDS", on_click=handle_clear_all)
 
     st.header("1. BUILDING DIMENSIONS")
