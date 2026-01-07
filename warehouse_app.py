@@ -307,28 +307,22 @@ with col_main:
         st.markdown(f'<table class="terminal-table">{h}<tbody>{rows}</tbody></table>', unsafe_allow_html=True)
         if st.button("CLEAR LOG"): st.session_state.history = []; st.rerun()
 
-# --- PAYPAL DONATION BUTTON ---
+# --- SUPPORT SECTION ---
 import streamlit.components.v1 as components
 
-st.markdown("---") # Adds a horizontal line to separate the button from the content
-st.markdown("### SUPPORT THE PROJECT")
+st.markdown("---")
+st.header("SUPPORT THE PROJECT")
+st.write("If you found RackOptimizer useful, consider helping keep the lights on.")
 
-paypal_html = """
-<div id="donate-button-container" style="text-align: center;">
-    <div id="donate-button"></div>
-    <script src="https://www.paypalobjects.com/donate/sdk/donate-sdk.js" charset="UTF-8"></script>
-    <script>
-    PayPal.Donation.Button({
-        env:'production',
-        hosted_button_id:'RGB36EQS29ZGG',
-        image: {
-            src:'https://www.paypalobjects.com/en_US/i/btn/btn_donate_SM.gif',
-            alt:'Donate with PayPal button',
-            title:'PayPal - The safer, easier way to pay online!',
-        }
-    }).render('#donate-button');
-    </script>
+# We use a larger height (150) to ensure the Large (LG) button isn't clipped
+paypal_form_html = """
+<div style="text-align: left;">
+    <form action="https://www.paypal.com/donate" method="post" target="_top">
+        <input type="hidden" name="hosted_button_id" value="RGB36EQS29ZGG" />
+        <input type="image" src="https://www.paypalobjects.com/en_US/i/btn/btn_donate_LG.gif" border="0" name="submit" title="PayPal - The safer, easier way to pay online!" alt="Donate with PayPal button" />
+        <img alt="" border="0" src="https://www.paypal.com/en_US/i/scr/pixel.gif" width="1" height="1" />
+    </form>
 </div>
 """
 
-components.html(paypal_html, height=100)
+components.html(paypal_form_html, height=150)
