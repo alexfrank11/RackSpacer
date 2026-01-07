@@ -306,3 +306,29 @@ with col_main:
         rows = "".join([f'<tr><td>{e["NAME"]}</td><td>{e["AISLE"]}</td><td>{e["BUILDING"]}</td><td>{e["PATTERN"]}</td><td>{e["CUBE"]}</td></tr>' for e in st.session_state.history])
         st.markdown(f'<table class="terminal-table">{h}<tbody>{rows}</tbody></table>', unsafe_allow_html=True)
         if st.button("CLEAR LOG"): st.session_state.history = []; st.rerun()
+
+# --- PAYPAL DONATION BUTTON ---
+import streamlit.components.v1 as components
+
+st.markdown("---") # Adds a horizontal line to separate the button from the content
+st.markdown("### SUPPORT THE PROJECT")
+
+paypal_html = """
+<div id="donate-button-container" style="text-align: center;">
+    <div id="donate-button"></div>
+    <script src="https://www.paypalobjects.com/donate/sdk/donate-sdk.js" charset="UTF-8"></script>
+    <script>
+    PayPal.Donation.Button({
+        env:'production',
+        hosted_button_id:'RGB36EQS29ZGG',
+        image: {
+            src:'https://www.paypalobjects.com/en_US/i/btn/btn_donate_SM.gif',
+            alt:'Donate with PayPal button',
+            title:'PayPal - The safer, easier way to pay online!',
+        }
+    }).render('#donate-button');
+    </script>
+</div>
+"""
+
+components.html(paypal_html, height=100)
