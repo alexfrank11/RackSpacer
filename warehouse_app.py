@@ -9,6 +9,16 @@ st.set_page_config(
     layout="wide"
 )
 
+# This tells Google what the site is about for the search snippet
+st.markdown(
+    f"""
+    <head>
+        <meta name="description" content="Rack Optimizer: High-precision tool for calculating the perfect warehouse racking storage layout for your fulfillment center columns.">
+    </head>
+    """,
+    unsafe_allow_html=True
+)
+
 # --- INITIALIZE MEMORY & DEFAULTS ---
 if 'history' not in st.session_state:
     st.session_state.history = []
