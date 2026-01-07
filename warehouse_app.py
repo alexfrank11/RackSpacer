@@ -314,10 +314,10 @@ st.markdown("---")
 st.header("SUPPORT THE PROJECT")
 st.write("If you found RackOptimizer useful, consider helping keep the lights on.")
 
-# We use a larger height (150) to ensure the Large (LG) button isn't clipped
+# We changed target="_top" to target="_blank" to ensure it opens in a new tab
 paypal_form_html = """
 <div style="text-align: left;">
-    <form action="https://www.paypal.com/donate" method="post" target="_top">
+    <form action="https://www.paypal.com/donate" method="post" target="_blank" rel="noopener noreferrer">
         <input type="hidden" name="hosted_button_id" value="RGB36EQS29ZGG" />
         <input type="image" src="https://www.paypalobjects.com/en_US/i/btn/btn_donate_LG.gif" border="0" name="submit" title="PayPal - The safer, easier way to pay online!" alt="Donate with PayPal button" />
         <img alt="" border="0" src="https://www.paypal.com/en_US/i/scr/pixel.gif" width="1" height="1" />
