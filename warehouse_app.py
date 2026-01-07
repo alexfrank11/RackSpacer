@@ -3,7 +3,11 @@ import numpy as np
 import plotly.graph_objects as go
 
 # --- PAGE CONFIG ---
-st.set_page_config(page_title="Rack Optimizer", layout="wide")
+st.set_page_config(
+    page_title="Rack Optimizer | A Tool For Perfect Warehouse Racking Layouts", # Your Search Title
+    page_icon="📦", # Favicon for the browser tab
+    layout="wide"
+)
 
 # --- INITIALIZE MEMORY & DEFAULTS ---
 if 'history' not in st.session_state:
