@@ -222,10 +222,24 @@ with col_main:
             unique_final = sorted([r for r in raw_coords if r[0] >= (r_min_y if orient == "Horizontal" else r_min_x) and r[1] <= (r_max_y if orient == "Horizontal" else r_max_x)])
             rack_cf = len(unique_final) * r_ft * (r_max_x - r_min_x if orient == "Horizontal" else r_max_y - r_min_y) * clear_ht
             build_util = (rack_cf / (b_l * b_w * clear_ht)) * 100
-            test_lim = (off_y if orient == "Horizontal" else off_x) + (col_y if orient == "Horizontal" else col_x)
+            
+            # --- CORRECTED PATTERN UTILIZATION ---
+            # We measure across 2 spans to match the "Engineering Pattern Detail" visual
             test_start = (off_y if orient == "Horizontal" else off_x)
-            sample_bay_coords, _ = get_coords(test_lim, test_start, col_y if orient == "Horizontal" else col_x)
-            p_util = ((len(sample_bay_coords) * r_ft * (st.session_state.col_y if orient == "Horizontal" else st.session_state.col_x)) / (col_x * col_y)) * 100
+            step_val = (col_y if orient == "Horizontal" else col_x)
+            test_lim = test_start + (step_val * 2) 
+            
+            sample_bay_coords, _ = get_coords(test_lim, test_start, step_val)
+            
+            # Area of racks in the 2-span sample
+            # If Horizontal, rack length is X span. If Vertical, rack length is Y span.
+            rack_len = col_x if orient == "Horizontal" else col_y
+            sample_rack_area = len(sample_bay_coords) * r_ft * rack_len
+            
+            # Total area of the 2-span footprint
+            sample_footprint_area = (col_x * col_y) * 2
+            
+            p_util = (sample_rack_area / sample_footprint_area) * 100
 
     # 5. VISUALIZATIONS
     st.header("5. VISUALIZATIONS")
