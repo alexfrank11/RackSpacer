@@ -126,7 +126,7 @@ col_main, _ = st.columns([850, 310])
 
 with col_main:
     st.title("RACK_OPTIMIZER")
-    st.markdown('<div class="subtitle">A high-precision structural layout tool for calculating storage density and rack layouts for fulfillment centers.</div>', unsafe_allow_html=True)
+    st.markdown('<div class="subtitle">A high-precision structural layout tool for calculating storage density and standard rack layouts for fulfillment centers.</div>', unsafe_allow_html=True)
     st.button("CLEAR ALL FIELDS", on_click=handle_clear_all)
 
     st.header("1. BUILDING DIMENSIONS")
@@ -223,23 +223,26 @@ with col_main:
             rack_cf = len(unique_final) * r_ft * (r_max_x - r_min_x if orient == "Horizontal" else r_max_y - r_min_y) * clear_ht
             build_util = (rack_cf / (b_l * b_w * clear_ht)) * 100
             
-            # --- CORRECTED PATTERN UTILIZATION ---
-            # We measure across 2 spans to match the "Engineering Pattern Detail" visual
-            test_start = (off_y if orient == "Horizontal" else off_x)
-            step_val = (col_y if orient == "Horizontal" else col_x)
-            test_lim = test_start + (step_val * 2) 
+           # --- FINAL CALCULATION FIX ---
+            # Determine which grid dimension we are 'stepping' across
+            step_dim = col_y if orient == "Horizontal" else col_x
+            # Determine how long each rack row is
+            rack_length = col_x if orient == "Horizontal" else col_y
             
-            sample_bay_coords, _ = get_coords(test_lim, test_start, step_val)
+            # Measure exactly 2 full spans to capture the repeating pattern
+            test_start = 0 
+            test_lim = step_dim * 2
             
-            # Area of racks in the 2-span sample
-            # If Horizontal, rack length is X span. If Vertical, rack length is Y span.
-            rack_len = col_x if orient == "Horizontal" else col_y
-            sample_rack_area = len(sample_bay_coords) * r_ft * rack_len
+            # Get coordinates for these 2 spans
+            sample_bay_coords, _ = get_coords(test_lim, test_start, step_dim)
             
-            # Total area of the 2-span footprint
-            sample_footprint_area = (col_x * col_y) * 2
+            # Total Rack SF = (Number of racks found) * (Rack Depth) * (Rack Length)
+            total_rack_sf = len(sample_bay_coords) * r_ft * rack_length
             
-            p_util = (sample_rack_area / sample_footprint_area) * 100
+            # Total Pattern SF = (X Span * Y Span) * 2
+            total_pattern_sf = (col_x * col_y) * 2
+            
+            p_util = (total_rack_sf / total_pattern_sf) * 100
 
     # 5. VISUALIZATIONS
     st.header("5. VISUALIZATIONS")
