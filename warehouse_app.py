@@ -126,7 +126,7 @@ col_main, _ = st.columns([850, 310])
 
 with col_main:
     st.title("RACK_OPTIMIZER")
-    st.markdown('<div class="subtitle">A high-precision structural layout tool for calculating storage density and standard rack layouts for fulfillment centers.</div>', unsafe_allow_html=True)
+    st.markdown('<div class="subtitle">A high-precision structural layout tool for calculating storage density and rack layouts for fulfillment centers.</div>', unsafe_allow_html=True)
     st.button("CLEAR ALL FIELDS", on_click=handle_clear_all)
 
     st.header("1. BUILDING DIMENSIONS")
@@ -188,32 +188,32 @@ with col_main:
             num_x, num_y = int(avail_x / col_x), int(avail_y / col_y)
             off_x, off_y = wall_l + (avail_x - (num_x * col_x)) / 2, wall_b + (avail_y - (num_y * col_y)) / 2
 
-            def get_coords(limit, grid_start, step):
+         def get_coords(limit, grid_start, step):
                 coords, dist_a = [], min_a 
                 if grid_start >= limit: return coords, dist_a
-                grid = np.arange(grid_start, limit + 0.1, step)
-                col_dim = col_d_ft if orient == "Horizontal" else col_w_ft
-                eff_flue = max(f_ft, col_dim)
+                
+                # Factor in column thickness so racks don't overlap steel
+                col_obs = col_w_ft if orient == "Vertical" else col_d_ft
+                usable_gap = step - col_obs
+                eff_flue = max(f_ft, col_obs)
+                
+                grid = np.arange(grid_start, limit, step)
                 for g in grid:
-                    bay_units = [] 
-                    if allow_single:
-                        bay_units.append(("S", r_ft)); remaining = (step - (r_ft + min_a))
-                    else:
-                        bay_units.append(("D", r_ft * 2 + eff_flue)); remaining = (step - (r_ft * 2 + eff_flue + min_a))
-                    while remaining >= (r_ft * 2 + f_ft + min_a):
-                        bay_units.append(("D", r_ft * 2 + f_ft)); remaining -= (r_ft * 2 + f_ft + min_a)
-                    if allow_single and remaining >= (r_ft + min_a):
-                        bay_units.append(("S", r_ft)); remaining -= (r_ft + min_a)
-                    num_a = len(bay_units)
-                    dist_a = min_a + (remaining / num_a) if num_a > 0 else min_a
-                    ptr = g
-                    for i, (utype, _) in enumerate(bay_units):
-                        if i == 0:
-                            if utype == "S": coords.append((ptr - r_ft/2, ptr + r_ft/2)); ptr += (r_ft/2 + dist_a)
-                            else: coords.append((ptr - eff_flue/2 - r_ft, ptr - eff_flue/2)); coords.append((ptr + eff_flue/2, ptr + eff_flue/2 + r_ft)); ptr += (eff_flue/2 + r_ft + dist_a)
-                        else:
-                            if utype == "S": coords.append((ptr, ptr + r_ft)); ptr += (r_ft + dist_a)
-                            else: coords.append((ptr, ptr + r_ft)); coords.append((ptr + r_ft + f_ft, ptr + r_ft * 2 + f_ft)); ptr += (r_ft * 2 + f_ft + dist_a)
+                    # Logic: How many Double Rows (Rack+Rack+Flue+Aisle) fit in the gap?
+                    unit_w = (r_ft * 2) + eff_flue + min_a
+                    num_units = int(usable_gap / unit_w)
+                    
+                    if num_units > 0:
+                        # Distribute remaining space as extra aisle width
+                        total_rack_w = num_units * (r_ft * 2 + eff_flue)
+                        dist_a = (usable_gap - total_rack_w) / num_units
+                        
+                        # Start placing from the "left" face of the column
+                        ptr = (g - step/2) + (col_obs/2)
+                        for _ in range(num_units):
+                            coords.append((ptr, ptr + r_ft))
+                            coords.append((ptr + r_ft + eff_flue, ptr + r_ft * 2 + eff_flue))
+                            ptr += (r_ft * 2 + eff_flue + dist_a)
                 return list(set(coords)), dist_a
 
             raw_coords, best_aisle = get_coords(wall_t if orient == "Horizontal" else wall_r, off_y if orient == "Horizontal" else off_x, col_y if orient == "Horizontal" else col_x)
