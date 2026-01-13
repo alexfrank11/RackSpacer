@@ -24,6 +24,7 @@ st.markdown(
 if 'history' not in st.session_state:
     st.session_state.history = []
 
+# Defaulting orient to "Vertical" as requested
 classic_defaults = {
     "b_l": 900.0, "b_w": 250.0, "clear_ht": 32.0,
     "sb_l": False, "sb_r": False, "sb_t": False, "sb_b": False,
@@ -155,7 +156,6 @@ with col_main:
                 if grid_start >= limit: return coords, dist_a
                 
                 col_obs = col_w_ft if orient == "Vertical" else col_d_ft
-                usable_gap = step - col_obs
                 eff_flue = max(f_ft, col_obs)
                 
                 grid = np.arange(grid_start, limit, step)
@@ -223,10 +223,17 @@ with col_main:
             y0, y1 = (r[0], r[1]) if orient == "Horizontal" else (r_min_y, r_max_y)
             fig.add_shape(type="rect", x0=x0, y0=y0, x1=x1, y1=y1, fillcolor="#00ff00", opacity=0.4, line_width=0)
         
-        # 4. COLUMNS
-        for x in np.arange(off_x if 'off_x' in locals() else 0, b_l + 0.1, col_x):
-            for y in np.arange(off_y if 'off_y' in locals() else 0, b_w + 0.1, col_y):
-                fig.add_shape(type="rect", x0=x-col_w_ft/2, y0=y-col_d_ft/2, x1=x+col_w_ft/2, y1=y+col_d_ft/2, fillcolor="#ff00ff")
+        # 4. COLUMNS (Rule: No columns in speed bays, allowed in racetrack)
+        for x in np.arange(off_x, b_l + 0.1, col_x):
+            for y in np.arange(off_y, b_w + 0.1, col_y):
+                in_sb = (
+                    (st.session_state.sb_l and x < st.session_state.sb_depth - 0.1) or
+                    (st.session_state.sb_r and x > b_l - st.session_state.sb_depth + 0.1) or
+                    (st.session_state.sb_b and y < st.session_state.sb_depth - 0.1) or
+                    (st.session_state.sb_t and y > b_w - st.session_state.sb_depth + 0.1)
+                )
+                if not in_sb:
+                    fig.add_shape(type="rect", x0=x-col_w_ft/2, y0=y-col_d_ft/2, x1=x+col_w_ft/2, y1=y+col_d_ft/2, fillcolor="#ff00ff")
     
     x_buf, y_buf = (b_l * 0.05 if b_l > 0 else 5), (b_w * 0.05 if b_w > 0 else 5)
     fig.update_layout(template="plotly_dark", paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)", margin=dict(l=0, r=0, t=20, b=20), 
@@ -236,6 +243,7 @@ with col_main:
 
     st.subheader("ENGINEERING PATTERN DETAIL")
     fig2 = go.Figure()
+    # Drawing 3x3 grid centered on columns to verify overlap
     for x in [0, col_x, col_x*2]:
         for y in [0, col_y, col_y*2]:
             fig2.add_shape(type="rect", x0=x-col_w_ft/2, y0=y-col_d_ft/2, x1=x+col_w_ft/2, y1=y+col_d_ft/2, fillcolor="#ff00ff")
