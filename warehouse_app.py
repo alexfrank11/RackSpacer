@@ -24,7 +24,6 @@ st.markdown(
 if 'history' not in st.session_state:
     st.session_state.history = []
 
-# Defaulting orient to "Vertical" as requested
 classic_defaults = {
     "b_l": 900.0, "b_w": 250.0, "clear_ht": 32.0,
     "sb_l": False, "sb_r": False, "sb_t": False, "sb_b": False,
@@ -155,7 +154,6 @@ with col_main:
                 coords, dist_a = [], min_a 
                 if grid_start >= limit: return coords, dist_a
                 
-                # Column obstruction remains the same for math logic
                 col_obs = col_w_ft if orient == "Vertical" else col_d_ft
                 usable_gap = step - col_obs
                 eff_flue = max(f_ft, col_obs)
@@ -163,7 +161,6 @@ with col_main:
                 grid = np.arange(grid_start, limit, step)
                 for g in grid:
                     bay_units = []
-                    # Standard structural layout: center the first unit on the column 'g'
                     if allow_single:
                         bay_units.append(("S", r_ft))
                         unit_w = r_ft + min_a
@@ -171,7 +168,6 @@ with col_main:
                         bay_units.append(("D", (r_ft * 2) + eff_flue))
                         unit_w = (r_ft * 2) + eff_flue + min_a
                     
-                    # See how many additional units fit in the span
                     additional = int((step - unit_w) / unit_w)
                     for _ in range(additional):
                         bay_units.append(("S" if allow_single else "D", unit_w - min_a))
@@ -180,17 +176,13 @@ with col_main:
                         total_rack_width = sum(u[1] for u in bay_units)
                         dist_a = (step - total_rack_width) / len(bay_units)
                         
-                        # --- KEY CHANGE: ANCHORING ON THE COLUMN CENTER 'g' ---
                         ptr = g
-                        for i, (utype, uwidth) in enumerate(bay_units):
+                        for utype, uwidth in bay_units:
                             if utype == "D":
-                                # Column sits exactly in the center of the flue
                                 coords.append((ptr - eff_flue/2 - r_ft, ptr - eff_flue/2))
                                 coords.append((ptr + eff_flue/2, ptr + eff_flue/2 + r_ft))
                             else:
-                                # Column sits exactly in the center of the single rack
                                 coords.append((ptr - r_ft/2, ptr + r_ft/2))
-                            
                             ptr += (uwidth + dist_a)
                 return list(set(coords)), dist_a
 
@@ -202,7 +194,6 @@ with col_main:
             rack_cf = len(unique_final) * r_ft * (r_max_x - r_min_x if orient == "Horizontal" else r_max_y - r_min_y) * clear_ht
             build_util = (rack_cf / (b_l * b_w * clear_ht)) * 100
 
-            # --- PATTERN UTILIZATION ---
             step_dim = col_y if orient == "Horizontal" else col_x
             rack_len = col_x if orient == "Horizontal" else col_y
             sample_coords, _ = get_coords(step_dim, 0, step_dim)
@@ -217,19 +208,22 @@ with col_main:
     fig.add_shape(type="rect", x0=0, y0=0, x1=b_l, y1=b_w, line=dict(color="#ffffff", width=2))
     
     if ready:
-        # Speed Bays
-        if sb_l: fig.add_shape(type="line", x0=st.session_state.sb_depth, y0=0, x1=st.session_state.sb_depth, y1=b_w, line=dict(color="#ff00ff", width=1, dash="dot"))
-        if sb_r: fig.add_shape(type="line", x0=b_l-st.session_state.sb_depth, y0=0, x1=b_l-st.session_state.sb_depth, y1=b_w, line=dict(color="#ff00ff", width=1, dash="dot"))
-        if sb_b: fig.add_shape(type="line", x0=0, y0=st.session_state.sb_depth, x1=b_l, y1=st.session_state.sb_depth, line=dict(color="#ff00ff", width=1, dash="dot"))
-        if sb_t: fig.add_shape(type="line", x0=0, y0=b_w-st.session_state.sb_depth, x1=b_l, y1=b_w-st.session_state.sb_depth, line=dict(color="#ff00ff", width=1, dash="dot"))
+        # 1. VISUALIZE SPEED BAYS (Cyan dotted lines)
+        if sb_l: fig.add_shape(type="line", x0=st.session_state.sb_depth, y0=0, x1=st.session_state.sb_depth, y1=b_w, line=dict(color="#00f3ff", width=2, dash="dot"))
+        if sb_r: fig.add_shape(type="line", x0=b_l-st.session_state.sb_depth, y0=0, x1=b_l-st.session_state.sb_depth, y1=b_w, line=dict(color="#00f3ff", width=2, dash="dot"))
+        if sb_b: fig.add_shape(type="line", x0=0, y0=st.session_state.sb_depth, x1=b_l, y1=st.session_state.sb_depth, line=dict(color="#00f3ff", width=2, dash="dot"))
+        if sb_t: fig.add_shape(type="line", x0=0, y0=b_w-st.session_state.sb_depth, x1=b_l, y1=b_w-st.session_state.sb_depth, line=dict(color="#00f3ff", width=2, dash="dot"))
 
-        # Racks
+        # 2. VISUALIZE RACETRACK / BUFFERS (Magenta dotted lines)
+        fig.add_shape(type="rect", x0=rt_l, y0=rt_b, x1=b_l-rt_r, y1=b_w-rt_t, line=dict(color="#ff00ff", width=2, dash="dot"))
+
+        # 3. RACKS
         for r in unique_final:
             x0, x1 = (r_min_x, r_max_x) if orient == "Horizontal" else (r[0], r[1])
             y0, y1 = (r[0], r[1]) if orient == "Horizontal" else (r_min_y, r_max_y)
-            fig.add_shape(type="rect", x0=x0, y0=y0, x1=x1, y1=y1, fillcolor="#00ff00", opacity=0.4, line_width=0, line_color="#00ff00")
+            fig.add_shape(type="rect", x0=x0, y0=y0, x1=x1, y1=y1, fillcolor="#00ff00", opacity=0.4, line_width=0)
         
-        # Columns
+        # 4. COLUMNS
         for x in np.arange(off_x if 'off_x' in locals() else 0, b_l + 0.1, col_x):
             for y in np.arange(off_y if 'off_y' in locals() else 0, b_w + 0.1, col_y):
                 fig.add_shape(type="rect", x0=x-col_w_ft/2, y0=y-col_d_ft/2, x1=x+col_w_ft/2, y1=y+col_d_ft/2, fillcolor="#ff00ff")
