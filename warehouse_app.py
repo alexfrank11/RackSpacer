@@ -24,6 +24,7 @@ st.markdown(
 if 'history' not in st.session_state:
     st.session_state.history = []
 
+# Defaulting orient to "Vertical" as requested
 classic_defaults = {
     "b_l": 900.0, "b_w": 250.0, "clear_ht": 32.0,
     "sb_l": False, "sb_r": False, "sb_t": False, "sb_b": False,
@@ -55,11 +56,6 @@ def apply_col_specs():
     st.session_state.rt_r = float(st.session_state.col_x)
     st.session_state.rt_t = float(st.session_state.col_y)
     st.session_state.rt_b = float(st.session_state.col_y)
-
-def update_sb_depth():
-    if any([st.session_state.sb_l, st.session_state.sb_r, st.session_state.sb_t, st.session_state.sb_b]):
-        if st.session_state.sb_depth == 0.0:
-            st.session_state.sb_depth = 60.0
 
 # --- CSS STYLING ---
 st.markdown("""
@@ -104,10 +100,10 @@ with col_main:
 
     st.header("2. CLEAR ZONES")
     sb_checks = st.columns(4)
-    sb_l = sb_checks[0].checkbox("Speed Bay L", key="sb_l", on_change=update_sb_depth)
-    sb_r = sb_checks[1].checkbox("Speed Bay R", key="sb_r", on_change=update_sb_depth)
-    sb_t = sb_checks[2].checkbox("Speed Bay T", key="sb_t", on_change=update_sb_depth)
-    sb_b = sb_checks[3].checkbox("Speed Bay B", key="sb_b", on_change=update_sb_depth)
+    sb_l = sb_checks[0].checkbox("Speed Bay L", key="sb_l")
+    sb_r = sb_checks[1].checkbox("Speed Bay R", key="sb_r")
+    sb_t = sb_checks[2].checkbox("Speed Bay T", key="sb_t")
+    sb_b = sb_checks[3].checkbox("Speed Bay B", key="sb_b")
     
     if any([st.session_state.sb_l, st.session_state.sb_r, st.session_state.sb_t, st.session_state.sb_b]):
         st.columns([1, 3])[0].number_input("Speed Bay Depth (ft)", key="sb_depth", step=1.0)
@@ -159,6 +155,7 @@ with col_main:
                 coords, dist_a = [], min_a 
                 if grid_start >= limit: return coords, dist_a
                 
+                # Column obstruction remains the same for math logic
                 col_obs = col_w_ft if orient == "Vertical" else col_d_ft
                 usable_gap = step - col_obs
                 eff_flue = max(f_ft, col_obs)
@@ -166,43 +163,35 @@ with col_main:
                 grid = np.arange(grid_start, limit, step)
                 for g in grid:
                     bay_units = []
-                    # Logic for unit width
+                    # Standard structural layout: center the first unit on the column 'g'
                     if allow_single:
-                        # Single Row: Rack + Aisle
-                        s_unit = r_ft + min_a
-                        # Double Row: Rack + Rack + Flue + Aisle
-                        d_unit = (r_ft * 2) + eff_flue + min_a
-                        
-                        remaining = usable_gap
-                        while remaining >= d_unit:
-                            bay_units.append(("D", (r_ft * 2) + eff_flue))
-                            remaining -= d_unit
-                        if remaining >= s_unit:
-                            bay_units.append(("S", r_ft))
-                            remaining -= s_unit
+                        bay_units.append(("S", r_ft))
+                        unit_w = r_ft + min_a
                     else:
-                        d_unit = (r_ft * 2) + eff_flue + min_a
-                        num_units = int(usable_gap / d_unit)
-                        for _ in range(num_units):
-                            bay_units.append(("D", (r_ft * 2) + eff_flue))
-                        remaining = usable_gap - (num_units * ((r_ft * 2) + eff_flue))
+                        bay_units.append(("D", (r_ft * 2) + eff_flue))
+                        unit_w = (r_ft * 2) + eff_flue + min_a
+                    
+                    # See how many additional units fit in the span
+                    additional = int((step - unit_w) / unit_w)
+                    for _ in range(additional):
+                        bay_units.append(("S" if allow_single else "D", unit_w - min_a))
 
                     if len(bay_units) > 0:
                         total_rack_width = sum(u[1] for u in bay_units)
-                        dist_a = (usable_gap - total_rack_width) / len(bay_units)
+                        dist_a = (step - total_rack_width) / len(bay_units)
                         
-                        # Start from column face
-                        ptr = (g - step/2) + (col_obs/2)
-                        for utype, uwidth in bay_units:
+                        # --- KEY CHANGE: ANCHORING ON THE COLUMN CENTER 'g' ---
+                        ptr = g
+                        for i, (utype, uwidth) in enumerate(bay_units):
                             if utype == "D":
-                                # Align pair to flue center
-                                coords.append((ptr, ptr + r_ft))
-                                coords.append((ptr + r_ft + eff_flue, ptr + r_ft * 2 + eff_flue))
-                                ptr += (uwidth + dist_a)
+                                # Column sits exactly in the center of the flue
+                                coords.append((ptr - eff_flue/2 - r_ft, ptr - eff_flue/2))
+                                coords.append((ptr + eff_flue/2, ptr + eff_flue/2 + r_ft))
                             else:
-                                # Single row placement
-                                coords.append((ptr, ptr + r_ft))
-                                ptr += (uwidth + dist_a)
+                                # Column sits exactly in the center of the single rack
+                                coords.append((ptr - r_ft/2, ptr + r_ft/2))
+                            
+                            ptr += (uwidth + dist_a)
                 return list(set(coords)), dist_a
 
             raw_coords, best_aisle = get_coords(wall_t if orient == "Horizontal" else wall_r, off_y if orient == "Horizontal" else off_x, col_y if orient == "Horizontal" else col_x)
@@ -213,7 +202,7 @@ with col_main:
             rack_cf = len(unique_final) * r_ft * (r_max_x - r_min_x if orient == "Horizontal" else r_max_y - r_min_y) * clear_ht
             build_util = (rack_cf / (b_l * b_w * clear_ht)) * 100
 
-            # --- PATTERN UTILIZATION CALC ---
+            # --- PATTERN UTILIZATION ---
             step_dim = col_y if orient == "Horizontal" else col_x
             rack_len = col_x if orient == "Horizontal" else col_y
             sample_coords, _ = get_coords(step_dim, 0, step_dim)
@@ -228,16 +217,19 @@ with col_main:
     fig.add_shape(type="rect", x0=0, y0=0, x1=b_l, y1=b_w, line=dict(color="#ffffff", width=2))
     
     if ready:
+        # Speed Bays
         if sb_l: fig.add_shape(type="line", x0=st.session_state.sb_depth, y0=0, x1=st.session_state.sb_depth, y1=b_w, line=dict(color="#ff00ff", width=1, dash="dot"))
         if sb_r: fig.add_shape(type="line", x0=b_l-st.session_state.sb_depth, y0=0, x1=b_l-st.session_state.sb_depth, y1=b_w, line=dict(color="#ff00ff", width=1, dash="dot"))
         if sb_b: fig.add_shape(type="line", x0=0, y0=st.session_state.sb_depth, x1=b_l, y1=st.session_state.sb_depth, line=dict(color="#ff00ff", width=1, dash="dot"))
         if sb_t: fig.add_shape(type="line", x0=0, y0=b_w-st.session_state.sb_depth, x1=b_l, y1=b_w-st.session_state.sb_depth, line=dict(color="#ff00ff", width=1, dash="dot"))
 
+        # Racks
         for r in unique_final:
             x0, x1 = (r_min_x, r_max_x) if orient == "Horizontal" else (r[0], r[1])
             y0, y1 = (r[0], r[1]) if orient == "Horizontal" else (r_min_y, r_max_y)
             fig.add_shape(type="rect", x0=x0, y0=y0, x1=x1, y1=y1, fillcolor="#00ff00", opacity=0.4, line_width=0, line_color="#00ff00")
         
+        # Columns
         for x in np.arange(off_x if 'off_x' in locals() else 0, b_l + 0.1, col_x):
             for y in np.arange(off_y if 'off_y' in locals() else 0, b_w + 0.1, col_y):
                 fig.add_shape(type="rect", x0=x-col_w_ft/2, y0=y-col_d_ft/2, x1=x+col_w_ft/2, y1=y+col_d_ft/2, fillcolor="#ff00ff")
