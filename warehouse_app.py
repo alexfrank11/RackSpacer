@@ -29,7 +29,7 @@ classic_defaults = {
     "sb_l": False, "sb_r": False, "sb_t": False, "sb_b": False,
     "rt_l": 50.0, "rt_r": 50.0, "rt_t": 47.5, "rt_b": 47.5,
     "col_x": 50.0, "col_y": 47.5, "col_w": 12.0, "col_d": 12.0,
-    "orient": "Horizontal", "r_in": 42.0, "f_in": 12.0, "min_a": 11.0, "single": False,
+    "orient": "Vertical", "r_in": 42.0, "f_in": 12.0, "min_a": 11.0, "single": False,
     "sb_depth": 60.0
 }
 
@@ -138,6 +138,7 @@ with col_main:
     r_in = r_c[1].number_input("Rack D (in)", key="r_in", step=1.0)
     f_in = r_c[2].number_input("Flue (in)", key="f_in", step=1.0)
     min_a = r_c[3].number_input("Min Aisle (ft)", key="min_a", step=1.0)
+    allow_single = st.checkbox("Allow single aisles", key="single")
     st.markdown('<div class="cyan-divider"></div>', unsafe_allow_html=True)
 
     # --- MATH ENGINE ---
@@ -164,17 +165,44 @@ with col_main:
                 
                 grid = np.arange(grid_start, limit, step)
                 for g in grid:
-                    unit_w = (r_ft * 2) + eff_flue + min_a
-                    num_units = int(usable_gap / unit_w)
-                    
-                    if num_units > 0:
-                        total_rack_w = num_units * (r_ft * 2 + eff_flue)
-                        dist_a = (usable_gap - total_rack_w) / num_units
-                        ptr = (g - step/2) + (col_obs/2)
+                    bay_units = []
+                    # Logic for unit width
+                    if allow_single:
+                        # Single Row: Rack + Aisle
+                        s_unit = r_ft + min_a
+                        # Double Row: Rack + Rack + Flue + Aisle
+                        d_unit = (r_ft * 2) + eff_flue + min_a
+                        
+                        remaining = usable_gap
+                        while remaining >= d_unit:
+                            bay_units.append(("D", (r_ft * 2) + eff_flue))
+                            remaining -= d_unit
+                        if remaining >= s_unit:
+                            bay_units.append(("S", r_ft))
+                            remaining -= s_unit
+                    else:
+                        d_unit = (r_ft * 2) + eff_flue + min_a
+                        num_units = int(usable_gap / d_unit)
                         for _ in range(num_units):
-                            coords.append((ptr, ptr + r_ft))
-                            coords.append((ptr + r_ft + eff_flue, ptr + r_ft * 2 + eff_flue))
-                            ptr += (r_ft * 2 + eff_flue + dist_a)
+                            bay_units.append(("D", (r_ft * 2) + eff_flue))
+                        remaining = usable_gap - (num_units * ((r_ft * 2) + eff_flue))
+
+                    if len(bay_units) > 0:
+                        total_rack_width = sum(u[1] for u in bay_units)
+                        dist_a = (usable_gap - total_rack_width) / len(bay_units)
+                        
+                        # Start from column face
+                        ptr = (g - step/2) + (col_obs/2)
+                        for utype, uwidth in bay_units:
+                            if utype == "D":
+                                # Align pair to flue center
+                                coords.append((ptr, ptr + r_ft))
+                                coords.append((ptr + r_ft + eff_flue, ptr + r_ft * 2 + eff_flue))
+                                ptr += (uwidth + dist_a)
+                            else:
+                                # Single row placement
+                                coords.append((ptr, ptr + r_ft))
+                                ptr += (uwidth + dist_a)
                 return list(set(coords)), dist_a
 
             raw_coords, best_aisle = get_coords(wall_t if orient == "Horizontal" else wall_r, off_y if orient == "Horizontal" else off_x, col_y if orient == "Horizontal" else col_x)
@@ -196,27 +224,20 @@ with col_main:
     
     st.subheader("BUILDING VIEW")
     fig = go.Figure()
-    
-    # Trace to force zoom/scaling
     fig.add_trace(go.Scatter(x=[0, b_l], y=[0, b_w], mode="markers", marker=dict(opacity=0), showlegend=False))
-    
-    # Building Perimeter
     fig.add_shape(type="rect", x0=0, y0=0, x1=b_l, y1=b_w, line=dict(color="#ffffff", width=2))
     
     if ready:
-        # Speed Bay lines
         if sb_l: fig.add_shape(type="line", x0=st.session_state.sb_depth, y0=0, x1=st.session_state.sb_depth, y1=b_w, line=dict(color="#ff00ff", width=1, dash="dot"))
         if sb_r: fig.add_shape(type="line", x0=b_l-st.session_state.sb_depth, y0=0, x1=b_l-st.session_state.sb_depth, y1=b_w, line=dict(color="#ff00ff", width=1, dash="dot"))
         if sb_b: fig.add_shape(type="line", x0=0, y0=st.session_state.sb_depth, x1=b_l, y1=st.session_state.sb_depth, line=dict(color="#ff00ff", width=1, dash="dot"))
         if sb_t: fig.add_shape(type="line", x0=0, y0=b_w-st.session_state.sb_depth, x1=b_l, y1=b_w-st.session_state.sb_depth, line=dict(color="#ff00ff", width=1, dash="dot"))
 
-        # Racks
         for r in unique_final:
             x0, x1 = (r_min_x, r_max_x) if orient == "Horizontal" else (r[0], r[1])
             y0, y1 = (r[0], r[1]) if orient == "Horizontal" else (r_min_y, r_max_y)
             fig.add_shape(type="rect", x0=x0, y0=y0, x1=x1, y1=y1, fillcolor="#00ff00", opacity=0.4, line_width=0, line_color="#00ff00")
         
-        # Columns
         for x in np.arange(off_x if 'off_x' in locals() else 0, b_l + 0.1, col_x):
             for y in np.arange(off_y if 'off_y' in locals() else 0, b_w + 0.1, col_y):
                 fig.add_shape(type="rect", x0=x-col_w_ft/2, y0=y-col_d_ft/2, x1=x+col_w_ft/2, y1=y+col_d_ft/2, fillcolor="#ff00ff")
@@ -229,8 +250,6 @@ with col_main:
 
     st.subheader("ENGINEERING PATTERN DETAIL")
     fig2 = go.Figure()
-    
-    # Grid of columns for pattern view
     for x in [0, col_x, col_x*2]:
         for y in [0, col_y, col_y*2]:
             fig2.add_shape(type="rect", x0=x-col_w_ft/2, y0=y-col_d_ft/2, x1=x+col_w_ft/2, y1=y+col_d_ft/2, fillcolor="#ff00ff")
@@ -239,7 +258,6 @@ with col_main:
         limit_val = col_y*2 if orient == "Horizontal" else col_x*2
         step_val = col_y if orient == "Horizontal" else col_x
         p_coords, _ = get_coords(limit_val, 0, step_val)
-        
         for r in p_coords:
             px0, px1 = (0, col_x*2) if orient == "Horizontal" else (r[0], r[1])
             py0, py1 = (r[0], r[1]) if orient == "Horizontal" else (0, col_y*2)
