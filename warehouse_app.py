@@ -29,7 +29,7 @@ classic_defaults = {
     "sb_l": False, "sb_r": False, "sb_t": False, "sb_b": False,
     "rt_l": 50.0, "rt_r": 50.0, "rt_t": 47.5, "rt_b": 47.5,
     "col_x": 50.0, "col_y": 47.5, "col_w": 12.0, "col_d": 12.0,
-    "orient": "Vertical", "r_in": 42.0, "f_in": 12.0, "min_a": 11.0, "single": False,
+    "orient": "Horizontal", "r_in": 42.0, "f_in": 12.0, "min_a": 11.0, "single": False,
     "sb_depth": 60.0
 }
 
@@ -180,6 +180,7 @@ with col_main:
             raw_coords, best_aisle = get_coords(wall_t if orient == "Horizontal" else wall_r, off_y if orient == "Horizontal" else off_x, col_y if orient == "Horizontal" else col_x)
             r_min_x, r_max_x = max(wall_l, rt_l), min(wall_r, b_l - rt_r)
             r_min_y, r_max_y = max(wall_b, rt_b), min(wall_t, b_w - rt_t)
+            
             unique_final = sorted([r for r in raw_coords if r[0] >= (r_min_y if orient == "Horizontal" else r_min_x) and r[1] <= (r_max_y if orient == "Horizontal" else r_max_x)])
             rack_cf = len(unique_final) * r_ft * (r_max_x - r_min_x if orient == "Horizontal" else r_max_y - r_min_y) * clear_ht
             build_util = (rack_cf / (b_l * b_w * clear_ht)) * 100
@@ -192,19 +193,62 @@ with col_main:
 
     # 5. VISUALIZATIONS
     st.header("5. VISUALIZATIONS")
+    
+    st.subheader("BUILDING VIEW")
     fig = go.Figure()
+    
+    # Trace to force zoom/scaling
+    fig.add_trace(go.Scatter(x=[0, b_l], y=[0, b_w], mode="markers", marker=dict(opacity=0), showlegend=False))
+    
+    # Building Perimeter
     fig.add_shape(type="rect", x0=0, y0=0, x1=b_l, y1=b_w, line=dict(color="#ffffff", width=2))
+    
     if ready:
+        # Speed Bay lines
+        if sb_l: fig.add_shape(type="line", x0=st.session_state.sb_depth, y0=0, x1=st.session_state.sb_depth, y1=b_w, line=dict(color="#ff00ff", width=1, dash="dot"))
+        if sb_r: fig.add_shape(type="line", x0=b_l-st.session_state.sb_depth, y0=0, x1=b_l-st.session_state.sb_depth, y1=b_w, line=dict(color="#ff00ff", width=1, dash="dot"))
+        if sb_b: fig.add_shape(type="line", x0=0, y0=st.session_state.sb_depth, x1=b_l, y1=st.session_state.sb_depth, line=dict(color="#ff00ff", width=1, dash="dot"))
+        if sb_t: fig.add_shape(type="line", x0=0, y0=b_w-st.session_state.sb_depth, x1=b_l, y1=b_w-st.session_state.sb_depth, line=dict(color="#ff00ff", width=1, dash="dot"))
+
+        # Racks
         for r in unique_final:
             x0, x1 = (r_min_x, r_max_x) if orient == "Horizontal" else (r[0], r[1])
             y0, y1 = (r[0], r[1]) if orient == "Horizontal" else (r_min_y, r_max_y)
-            fig.add_shape(type="rect", x0=x0, y0=y0, x1=x1, y1=y1, fillcolor="#00ff00", opacity=0.3, line_width=0.5, line_color="#00ff00")
+            fig.add_shape(type="rect", x0=x0, y0=y0, x1=x1, y1=y1, fillcolor="#00ff00", opacity=0.4, line_width=0, line_color="#00ff00")
+        
+        # Columns
         for x in np.arange(off_x if 'off_x' in locals() else 0, b_l + 0.1, col_x):
             for y in np.arange(off_y if 'off_y' in locals() else 0, b_w + 0.1, col_y):
                 fig.add_shape(type="rect", x0=x-col_w_ft/2, y0=y-col_d_ft/2, x1=x+col_w_ft/2, y1=y+col_d_ft/2, fillcolor="#ff00ff")
     
-    fig.update_layout(template="plotly_dark", paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)", margin=dict(l=0, r=0, t=20, b=20), xaxis=dict(scaleanchor="y", scaleratio=1, showgrid=False), yaxis=dict(showgrid=False))
+    x_buf, y_buf = (b_l * 0.05 if b_l > 0 else 5), (b_w * 0.05 if b_w > 0 else 5)
+    fig.update_layout(template="plotly_dark", paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)", margin=dict(l=0, r=0, t=20, b=20), 
+                      xaxis=dict(range=[-x_buf, b_l + x_buf], scaleanchor="y", scaleratio=1, showgrid=False, zeroline=False), 
+                      yaxis=dict(range=[-y_buf, b_w + y_buf], showgrid=False, zeroline=False), height=600)
     st.plotly_chart(fig, use_container_width=True)
+
+    st.subheader("ENGINEERING PATTERN DETAIL")
+    fig2 = go.Figure()
+    
+    # Grid of columns for pattern view
+    for x in [0, col_x, col_x*2]:
+        for y in [0, col_y, col_y*2]:
+            fig2.add_shape(type="rect", x0=x-col_w_ft/2, y0=y-col_d_ft/2, x1=x+col_w_ft/2, y1=y+col_d_ft/2, fillcolor="#ff00ff")
+    
+    if ready:
+        limit_val = col_y*2 if orient == "Horizontal" else col_x*2
+        step_val = col_y if orient == "Horizontal" else col_x
+        p_coords, _ = get_coords(limit_val, 0, step_val)
+        
+        for r in p_coords:
+            px0, px1 = (0, col_x*2) if orient == "Horizontal" else (r[0], r[1])
+            py0, py1 = (r[0], r[1]) if orient == "Horizontal" else (0, col_y*2)
+            fig2.add_shape(type="rect", x0=px0, y0=py0, x1=px1, y1=py1, line=dict(color="#39FF14", width=1), fillcolor="rgba(57, 255, 20, 0.4)")
+    
+    fig2.add_trace(go.Scatter(x=[-5, col_x*2+5], y=[-5, col_y*2+5], mode="markers", marker=dict(opacity=0), showlegend=False))
+    fig2.update_layout(template="plotly_dark", paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)", height=500,
+                      xaxis=dict(scaleanchor="y", showgrid=False, zeroline=False), yaxis=dict(showgrid=False, zeroline=False))
+    st.plotly_chart(fig2, use_container_width=True)
 
 # --- SIDEBAR RECEIPT ---
 area_val = f"{b_l*b_w:,.0f}" if (b_l > 0 and b_w > 0) else "0"
