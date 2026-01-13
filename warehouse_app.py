@@ -1,17 +1,18 @@
 import streamlit as st
 import numpy as np
 import plotly.graph_objects as go
+import streamlit.components.v1 as components
 
 # --- PAGE CONFIG ---
 st.set_page_config(
-    page_title="Rack Optimizer | A Tool For Perfect Warehouse Racking Layouts", # Your Search Title
-    page_icon="📦", # Favicon for the browser tab
+    page_title="Rack Optimizer | A Tool For Perfect Warehouse Racking Layouts",
+    page_icon="📦",
     layout="wide"
 )
 
-# This tells Google what the site is about for the search snippet
+# Meta tags for SEO
 st.markdown(
-    f"""
+    """
     <head>
         <meta name="description" content="Rack Optimizer: High-precision tool for calculating the perfect warehouse racking storage layout for your fulfillment center columns.">
     </head>
@@ -24,19 +25,19 @@ if 'history' not in st.session_state:
     st.session_state.history = []
 
 classic_defaults = {
-    "b_l": 400.0, "b_w": 200.0, "clear_ht": 30.0,
+    "b_l": 900.0, "b_w": 250.0, "clear_ht": 32.0,
     "sb_l": False, "sb_r": False, "sb_t": False, "sb_b": False,
-    "rt_l": 30.0, "rt_r": 30.0, "rt_t": 30.0, "rt_b": 30.0,
-    "col_x": 40.0, "col_y": 40.0, "col_w": 12.0, "col_d": 12.0,
-    "orient": "Vertical", "r_in": 42.0, "f_in": 12.0, "min_a": 10.0, "single": False,
-    "sb_depth": 0.0
+    "rt_l": 50.0, "rt_r": 50.0, "rt_t": 47.5, "rt_b": 47.5,
+    "col_x": 50.0, "col_y": 47.5, "col_w": 12.0, "col_d": 12.0,
+    "orient": "Vertical", "r_in": 42.0, "f_in": 12.0, "min_a": 11.0, "single": False,
+    "sb_depth": 60.0
 }
 
 for key, val in classic_defaults.items():
     if key not in st.session_state:
         st.session_state[key] = val
 
-# --- CALLBACK FOR RESET ---
+# --- CALLBACKS ---
 def handle_clear_all():
     dims = ["b_l", "b_w", "clear_ht", "rt_l", "rt_r", "rt_t", "rt_b", "r_in", "f_in", "min_a", "sb_depth"]
     checks = ["sb_l", "sb_r", "sb_t", "sb_b", "single"]
@@ -44,7 +45,6 @@ def handle_clear_all():
     for k in checks: st.session_state[k] = False
     st.session_state["orient"] = "Vertical"
 
-# --- CALLBACK FUNCTIONS ---
 def apply_l_to_all():
     st.session_state.rt_r = float(st.session_state.rt_l)
     st.session_state.rt_t = float(st.session_state.rt_l)
@@ -57,101 +57,67 @@ def apply_col_specs():
     st.session_state.rt_b = float(st.session_state.col_y)
 
 def update_sb_depth():
-    if st.session_state.sb_l or st.session_state.sb_r:
-        ref_span = st.session_state.col_x
-    elif st.session_state.sb_t or st.session_state.sb_b:
-        ref_span = st.session_state.col_y
-    else:
-        ref_span = 0
-        
     if any([st.session_state.sb_l, st.session_state.sb_r, st.session_state.sb_t, st.session_state.sb_b]):
         if st.session_state.sb_depth == 0.0:
-            st.session_state.sb_depth = (ref_span * 1.5) if ref_span > 0 else 60.0
+            st.session_state.sb_depth = 60.0
 
-# --- CSS: THEME, DROPDOWN & RESPONSIVE SIDEBAR ---
+# --- CSS STYLING ---
 st.markdown("""
     <style>
     @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700;800;900&family=Inter:wght@400;700&display=swap');
     .stApp { background-color: #000000; color: #ffffff; font-family: 'Inter', sans-serif; }
     * { border-radius: 0px !important; }
-    
-    h1 { color: #00f3ff !important; font-family: 'JetBrains Mono', monospace !important; font-weight: 900 !important; text-transform: uppercase; letter-spacing: -0.05em; margin-bottom: 0.2rem; }
+    h1 { color: #00f3ff !important; font-family: 'JetBrains Mono', monospace !important; font-weight: 900 !important; text-transform: uppercase; letter-spacing: -0.05em; }
     .subtitle { color: #ffffff; font-family: 'Inter', sans-serif; font-size: 1rem; opacity: 0.8; margin-bottom: 2rem; }
-    h2, h3 { color: #ffffff !important; font-family: 'JetBrains Mono', monospace !important; font-weight: 600 !important; text-transform: uppercase; letter-spacing: 0.05em; }
-    
     .cyan-divider { border: none; border-top: 2px dotted #00f3ff; width: 100%; margin: 2rem 0; opacity: 0.6; }
     [data-testid="stWidgetLabel"] p { color: #00f3ff !important; font-family: 'JetBrains Mono', monospace !important; font-weight: 900 !important; font-size: 0.85em !important; text-transform: uppercase !important; }
-    
-    [data-testid="stTooltipIcon"] svg { fill: #00f3ff !important; }
-    div[data-testid="stTooltipContent"] { background-color: #1a1a1a !important; color: #ffffff !important; border: 1px solid #00f3ff !important; padding: 10px !important; }
-
-    /* Dropdown Chevron White */
-    div[data-baseweb="select"] svg { fill: #ffffff !important; }
-
-    /* Static White Border for Inputs and Selectbox */
     div[data-baseweb="input"] > div, .stNumberInput input, .stTextInput input, div[data-baseweb="select"] > div { 
         background-color: #1a1a1a !important; color: #ffffff !important; border: 1px solid #ffffff !important; font-family: 'JetBrains Mono', monospace !important; 
     }
-    
-    input::placeholder { color: #ffffff !important; opacity: 1.0 !important; }
-
-    div[data-baseweb="popover"] ul { background-color: #1a1a1a !important; border: 1px solid #00f3ff !important; }
-    div[data-baseweb="popover"] li { color: #ffffff !important; font-family: 'JetBrains Mono', monospace !important; }
-    div[data-baseweb="popover"] li:hover { background-color: #ff00ff !important; color: white !important; }
-
-    .stButton > button {
-        background-color: rgb(255, 0, 255) !important; color: #ffffff !important; font-family: 'JetBrains Mono', monospace !important; font-weight: 900 !important; text-transform: uppercase !important; border: none !important; box-shadow: 4px 4px 0px #ffffff !important;
-    }
-
-    .terminal-table { width: 100%; border-collapse: collapse; font-family: 'JetBrains Mono', monospace; margin-top: 20px; }
-    .terminal-table th { color: #00f3ff; font-size: 0.75em; text-transform: uppercase; font-weight: 900; text-align: left; padding: 10px; border-bottom: 1px dashed #333; }
-    .terminal-table td { color: #ffffff; font-size: 0.85em; padding: 10px; border-bottom: 1px solid #1a1a1a; }
-
-    /* Fixed Receipt: Desktop vs Mobile Snapping */
+    .stButton > button { background-color: rgb(255, 0, 255) !important; color: #ffffff !important; font-family: 'JetBrains Mono', monospace !important; font-weight: 900 !important; text-transform: uppercase !important; border: none !important; box-shadow: 4px 4px 0px #ffffff !important; }
     .fixed-receipt-sidebar { background-color: #000000; border: 2px solid #ffffff; padding: 20px; box-shadow: 10px 10px 0px #ff00ff; z-index: 9999; }
-    @media (min-width: 1024px) {
-        .fixed-receipt-sidebar { position: fixed; top: 80px; right: 20px; width: 325px; }
-    }
-    @media (max-width: 1023px) {
-        .fixed-receipt-sidebar { position: relative; top: 0; right: 0; width: 100%; margin: 20px 0; }
-    }
-
+    @media (min-width: 1024px) { .fixed-receipt-sidebar { position: fixed; top: 80px; right: 20px; width: 325px; } }
+    @media (max-width: 1023px) { .fixed-receipt-sidebar { position: relative; top: 0; right: 0; width: 100%; margin: 20px 0; } }
     .metric-card { background-color: #000000; border: 1px solid #00ff00; padding: 12px; margin-top: 15px; box-shadow: 5px 5px 0px #00ff00; }
-    .warning-text { color: #ff00ff; font-family: 'JetBrains Mono', monospace; font-size: 0.75em; font-weight: 900; margin-bottom: 5px; text-transform: uppercase; }
+    .warning-text { color: #ff00ff; font-family: 'JetBrains Mono', monospace; font-size: 0.75em; font-weight: 900; text-transform: uppercase; }
+    .terminal-table { width: 100%; border-collapse: collapse; font-family: 'JetBrains Mono', monospace; margin-top: 20px; }
+    .terminal-table th { color: #00f3ff; font-size: 0.75em; text-transform: uppercase; text-align: left; padding: 10px; border-bottom: 1px dashed #333; }
+    .terminal-table td { color: #ffffff; font-size: 0.85em; padding: 10px; border-bottom: 1px solid #1a1a1a; }
     [data-testid="stSidebar"] { display: none; }
     </style>
     """, unsafe_allow_html=True)
 
+# --- MAIN UI ---
 col_main, _ = st.columns([850, 310])
 
 with col_main:
     st.title("RACK_OPTIMIZER")
-    st.markdown('<div class="subtitle">A high-precision structural layout tool for calculating storage density and rack layouts for fulfillment centers.</div>', unsafe_allow_html=True)
+    st.markdown('<div class="subtitle">A high-precision structural layout tool for storage density and rack layouts.</div>', unsafe_allow_html=True)
     st.button("CLEAR ALL FIELDS", on_click=handle_clear_all)
 
     st.header("1. BUILDING DIMENSIONS")
     b_c = st.columns(3)
-    b_l = b_c[0].number_input("Length (ft)", key="b_l", step=1.0, help="The long way across your warehouse floor.")
-    b_w = b_c[1].number_input("Width (ft)", key="b_w", step=1.0, help="The narrow way across your warehouse floor.")
-    clear_ht = b_c[2].number_input("Clear Height (ft)", key="clear_ht", step=1.0, help="How high can you stack before hitting the ceiling?")
+    b_l = b_c[0].number_input("Length (ft)", key="b_l", step=1.0)
+    b_w = b_c[1].number_input("Width (ft)", key="b_w", step=1.0)
+    clear_ht = b_c[2].number_input("Clear Height (ft)", key="clear_ht", step=1.0)
     st.markdown('<div class="cyan-divider"></div>', unsafe_allow_html=True)
 
     st.header("2. CLEAR ZONES")
     sb_checks = st.columns(4)
-    sb_l = sb_checks[0].checkbox("Speed Bay L", key="sb_l", on_change=update_sb_depth, help="Extra room on the left for traffic.")
-    sb_r = sb_checks[1].checkbox("Speed Bay R", key="sb_r", on_change=update_sb_depth, help="Extra room on the right for traffic.")
-    sb_t = sb_checks[2].checkbox("Speed Bay T", key="sb_t", on_change=update_sb_depth, help="Extra room on the top for traffic.")
-    sb_b = sb_checks[3].checkbox("Speed Bay B", key="sb_b", on_change=update_sb_depth, help="Extra room on the bottom for traffic.")
+    sb_l = sb_checks[0].checkbox("Speed Bay L", key="sb_l", on_change=update_sb_depth)
+    sb_r = sb_checks[1].checkbox("Speed Bay R", key="sb_r", on_change=update_sb_depth)
+    sb_t = sb_checks[2].checkbox("Speed Bay T", key="sb_t", on_change=update_sb_depth)
+    sb_b = sb_checks[3].checkbox("Speed Bay B", key="sb_b", on_change=update_sb_depth)
     
     if any([st.session_state.sb_l, st.session_state.sb_r, st.session_state.sb_t, st.session_state.sb_b]):
-        st.columns([1, 3])[0].number_input("Speed Bay Depth (ft)", key="sb_depth", step=1.0, help="How deep do those staging lanes need to be?")
+        st.columns([1, 3])[0].number_input("Speed Bay Depth (ft)", key="sb_depth", step=1.0)
     
     st.subheader("RACETRACK")
     rt_c = st.columns(4)
-    rt_l = rt_c[0].number_input("L Buffer", key="rt_l", step=1.0, help="Gap from the racks to the left wall.")
-    rt_r = rt_c[1].number_input("R Buffer", key="rt_r", step=1.0, help="Gap from the racks to the right wall.")
-    rt_t = rt_c[2].number_input("T Buffer", key="rt_t", step=1.0, help="Gap from the racks to the top wall.")
-    rt_b = rt_c[3].number_input("B Buffer", key="rt_b", step=1.0, help="Gap from the racks to the bottom wall.")
+    rt_l = rt_c[0].number_input("L Buffer", key="rt_l", step=1.0)
+    rt_r = rt_c[1].number_input("R Buffer", key="rt_r", step=1.0)
+    rt_t = rt_c[2].number_input("T Buffer", key="rt_t", step=1.0)
+    rt_b = rt_c[3].number_input("B Buffer", key="rt_b", step=1.0)
     
     rt_btns = st.columns([1.5, 1.5, 5])
     rt_btns[0].button("APPLY L. TO ALL", on_click=apply_l_to_all)
@@ -160,19 +126,18 @@ with col_main:
 
     st.header("3. COLUMN SPECIFICATIONS")
     c_c = st.columns(4)
-    col_x = c_c[0].number_input("X Span (ft)", key="col_x", step=1.0, help="Distance between column centers horizontally.")
-    col_y = c_c[1].number_input("Y Span (ft)", key="col_y", step=1.0, help="Distance between column centers vertically.")
-    col_w_ft = c_c[2].number_input("Col W (in)", key="col_w", step=1.0, help="Width of the physical post.")/12
-    col_d_ft = c_c[3].number_input("Col D (in)", key="col_d", step=1.0, help="Depth of the physical post.")/12
+    col_x = c_c[0].number_input("X Span (ft)", key="col_x", step=1.0)
+    col_y = c_c[1].number_input("Y Span (ft)", key="col_y", step=1.0)
+    col_w_ft = c_c[2].number_input("Col W (in)", key="col_w", step=1.0)/12
+    col_d_ft = c_c[3].number_input("Col D (in)", key="col_d", step=1.0)/12
     st.markdown('<div class="cyan-divider"></div>', unsafe_allow_html=True)
 
     st.header("4. RACK OPTIMIZATION")
     r_c = st.columns(4)
-    orient = r_c[0].selectbox("Orientation", ["Vertical", "Horizontal"], key="orient", help="Up-down or side-to-side?")
-    r_in = r_c[1].number_input("Rack D (in)", key="r_in", step=1.0, help="Depth of a single rack frame.")
-    f_in = r_c[2].number_input("Flue (in)", key="f_in", step=1.0, help="Safety gap between back-to-back rows.")
-    min_a = r_c[3].number_input("Min Aisle (ft)", key="min_a", step=1.0, help="Turning room for your forklifts.")
-    allow_single = st.checkbox("Allow single aisles", key="single", help="Mix single and double rows to maximize pallet count.")
+    orient = r_c[0].selectbox("Orientation", ["Vertical", "Horizontal"], key="orient")
+    r_in = r_c[1].number_input("Rack D (in)", key="r_in", step=1.0)
+    f_in = r_c[2].number_input("Flue (in)", key="f_in", step=1.0)
+    min_a = r_c[3].number_input("Min Aisle (ft)", key="min_a", step=1.0)
     st.markdown('<div class="cyan-divider"></div>', unsafe_allow_html=True)
 
     # --- MATH ENGINE ---
@@ -184,31 +149,27 @@ with col_main:
         wall_l, wall_r = (st.session_state.sb_depth if sb_l else 0), (b_l - (st.session_state.sb_depth if sb_r else 0))
         wall_b, wall_t = (st.session_state.sb_depth if sb_b else 0), (b_w - (st.session_state.sb_depth if sb_t else 0))
         avail_x, avail_y = wall_r - wall_l, wall_t - wall_b
+        
         if avail_x > 0 and avail_y > 0:
             num_x, num_y = int(avail_x / col_x), int(avail_y / col_y)
             off_x, off_y = wall_l + (avail_x - (num_x * col_x)) / 2, wall_b + (avail_y - (num_y * col_y)) / 2
 
-         def get_coords(limit, grid_start, step):
+            def get_coords(limit, grid_start, step):
                 coords, dist_a = [], min_a 
                 if grid_start >= limit: return coords, dist_a
                 
-                # Factor in column thickness so racks don't overlap steel
                 col_obs = col_w_ft if orient == "Vertical" else col_d_ft
                 usable_gap = step - col_obs
                 eff_flue = max(f_ft, col_obs)
                 
                 grid = np.arange(grid_start, limit, step)
                 for g in grid:
-                    # Logic: How many Double Rows (Rack+Rack+Flue+Aisle) fit in the gap?
                     unit_w = (r_ft * 2) + eff_flue + min_a
                     num_units = int(usable_gap / unit_w)
                     
                     if num_units > 0:
-                        # Distribute remaining space as extra aisle width
                         total_rack_w = num_units * (r_ft * 2 + eff_flue)
                         dist_a = (usable_gap - total_rack_w) / num_units
-                        
-                        # Start placing from the "left" face of the column
                         ptr = (g - step/2) + (col_obs/2)
                         for _ in range(num_units):
                             coords.append((ptr, ptr + r_ft))
@@ -222,76 +183,34 @@ with col_main:
             unique_final = sorted([r for r in raw_coords if r[0] >= (r_min_y if orient == "Horizontal" else r_min_x) and r[1] <= (r_max_y if orient == "Horizontal" else r_max_x)])
             rack_cf = len(unique_final) * r_ft * (r_max_x - r_min_x if orient == "Horizontal" else r_max_y - r_min_y) * clear_ht
             build_util = (rack_cf / (b_l * b_w * clear_ht)) * 100
-            
-           # --- FINAL CALCULATION FIX ---
-            # Determine which grid dimension we are 'stepping' across
+
+            # --- PATTERN UTILIZATION CALC ---
             step_dim = col_y if orient == "Horizontal" else col_x
-            # Determine how long each rack row is
-            rack_length = col_x if orient == "Horizontal" else col_y
-            
-            # Measure exactly 2 full spans to capture the repeating pattern
-            test_start = 0 
-            test_lim = step_dim * 2
-            
-            # Get coordinates for these 2 spans
-            sample_bay_coords, _ = get_coords(test_lim, test_start, step_dim)
-            
-            # Total Rack SF = (Number of racks found) * (Rack Depth) * (Rack Length)
-            total_rack_sf = len(sample_bay_coords) * r_ft * rack_length
-            
-            # Total Pattern SF = (X Span * Y Span) * 2
-            total_pattern_sf = (col_x * col_y) * 2
-            
-            p_util = (total_rack_sf / total_pattern_sf) * 100
+            rack_len = col_x if orient == "Horizontal" else col_y
+            sample_coords, _ = get_coords(step_dim, 0, step_dim)
+            p_util = (len(sample_coords) * r_ft * rack_len) / (col_x * col_y) * 100
 
     # 5. VISUALIZATIONS
     st.header("5. VISUALIZATIONS")
-    st.subheader("BUILDING VIEW")
     fig = go.Figure()
     fig.add_shape(type="rect", x0=0, y0=0, x1=b_l, y1=b_w, line=dict(color="#ffffff", width=2))
-    
-    if b_l > 0 and b_w > 0:
-        if st.session_state.sb_l: fig.add_shape(type="line", x0=st.session_state.sb_depth, y0=0, x1=st.session_state.sb_depth, y1=b_w, line=dict(color="#ff00ff", width=2, dash="dot"))
-        if st.session_state.sb_r: fig.add_shape(type="line", x0=b_l-st.session_state.sb_depth, y0=0, x1=b_l-st.session_state.sb_depth, y1=b_w, line=dict(color="#ff00ff", width=2, dash="dot"))
-        if st.session_state.sb_b: fig.add_shape(type="line", x0=0, y0=st.session_state.sb_depth, x1=b_l, y1=st.session_state.sb_depth, line=dict(color="#ff00ff", width=2, dash="dot"))
-        if st.session_state.sb_t: fig.add_shape(type="line", x0=0, y0=b_w-st.session_state.sb_depth, x1=b_l, y1=b_w-st.session_state.sb_depth, line=dict(color="#ff00ff", width=2, dash="dot"))
-
     if ready:
-        fig.add_shape(type="rect", x0=r_min_x, y0=r_min_y, x1=r_max_x, y1=r_max_y, line=dict(color="#00ff00", width=1.5, dash="dot"))
         for r in unique_final:
             x0, x1 = (r_min_x, r_max_x) if orient == "Horizontal" else (r[0], r[1])
             y0, y1 = (r[0], r[1]) if orient == "Horizontal" else (r_min_y, r_max_y)
             fig.add_shape(type="rect", x0=x0, y0=y0, x1=x1, y1=y1, fillcolor="#00ff00", opacity=0.3, line_width=0.5, line_color="#00ff00")
-        for x in np.arange(off_x if 'off_x' in locals() else 0, (b_l-st.session_state.sb_depth if st.session_state.sb_r else b_l) + 0.1, col_x):
-            for y in np.arange(off_y if 'off_y' in locals() else 0, (b_w-st.session_state.sb_depth if st.session_state.sb_t else b_w) + 0.1, col_y):
+        for x in np.arange(off_x if 'off_x' in locals() else 0, b_l + 0.1, col_x):
+            for y in np.arange(off_y if 'off_y' in locals() else 0, b_w + 0.1, col_y):
                 fig.add_shape(type="rect", x0=x-col_w_ft/2, y0=y-col_d_ft/2, x1=x+col_w_ft/2, y1=y+col_d_ft/2, fillcolor="#ff00ff")
     
-    x_buf, y_buf = (b_l * 0.05 if b_l > 0 else 5), (b_w * 0.05 if b_w > 0 else 5)
-    fig.update_layout(template="plotly_dark", paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)", margin=dict(l=0, r=0, t=20, b=20), xaxis=dict(range=[-x_buf, b_l + x_buf], scaleanchor="y", scaleratio=1, showgrid=False), yaxis=dict(range=[-y_buf, b_w + y_buf], showgrid=False))
+    fig.update_layout(template="plotly_dark", paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)", margin=dict(l=0, r=0, t=20, b=20), xaxis=dict(scaleanchor="y", scaleratio=1, showgrid=False), yaxis=dict(showgrid=False))
     st.plotly_chart(fig, use_container_width=True)
-
-    st.subheader("ENGINEERING PATTERN DETAIL")
-    fig2 = go.Figure()
-    for x in [0, col_x, col_x*2]:
-        for y in [0, col_y, col_y*2]:
-            fig2.add_shape(type="rect", x0=x-col_w_ft/2, y0=y-col_d_ft/2, x1=x+col_w_ft/2, y1=y+col_d_ft/2, fillcolor="#ff00ff")
-    if ready:
-        limit_val = col_y*2 if orient == "Horizontal" else col_x*2
-        step_val = col_y if orient == "Horizontal" else col_x
-        p_coords, _ = get_coords(limit_val, 0, step_val)
-        visual_buffer = r_ft / 2
-        for r in p_coords:
-            if r[0] >= -visual_buffer and r[1] <= limit_val + visual_buffer:
-                px0, px1 = (0, col_x*2) if orient == "Horizontal" else (r[0], r[1])
-                py0, py1 = (r[0], r[1]) if orient == "Horizontal" else (0, col_y*2)
-                fig2.add_shape(type="rect", x0=px0, y0=py0, x1=px1, y1=py1, line=dict(color="#39FF14", width=1.5), fillcolor="rgba(57, 255, 20, 0.4)")
-    fig2.update_layout(template="plotly_dark", paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)", width=800, height=450, xaxis=dict(range=[-10, max(col_x*2, 10)+10], scaleanchor="y", showgrid=False), yaxis=dict(range=[-10, max(col_y*2, 10)+10], showgrid=False))
-    st.plotly_chart(fig2, use_container_width=True)
 
 # --- SIDEBAR RECEIPT ---
 area_val = f"{b_l*b_w:,.0f}" if (b_l > 0 and b_w > 0) else "0"
 aisle_val = f"{best_aisle:.2f} ft" if ready else "N/A"
 util_val = f"{build_util:.1f}%" if ready else "0.0%"
+
 receipt_html = (
     f'<div class="fixed-receipt-sidebar">'
     f'<div style="font-weight: 900; color: #00f3ff; font-size: 0.8em; margin-bottom: 5px; font-family: JetBrains Mono;">BUILDING_METRICS</div>'
@@ -311,13 +230,11 @@ st.markdown(receipt_html, unsafe_allow_html=True)
 # --- SCENARIO LOG ---
 with col_main:
     st.header("SCENARIO_LOG")
-    st.markdown('<div class="warning-text">⚠️ Warning: Data is not persistent. Refreshing the browser will wipe the log.</div>', unsafe_allow_html=True)
+    st.markdown('<div class="warning-text">⚠️ Data is not persistent. Refresh wipes log.</div>', unsafe_allow_html=True)
     scen_name = st.text_input("SCENARIO NAME", placeholder="E.G. PLAN_ALPHA")
-    st.markdown('<div id="PRECISION_SAVE_ZONE">', unsafe_allow_html=True)
     if st.button("SAVE SNAPSHOT"):
         if ready:
             st.session_state.history.append({"NAME": scen_name if scen_name else f"PLAN_{len(st.session_state.history)+1}", "AISLE": aisle_val, "BUILDING": util_val, "PATTERN": f"{p_util:.1f}%", "CUBE": f"{rack_cf:,.0f}"})
-    st.markdown('</div>', unsafe_allow_html=True)
     if st.session_state.history:
         h = "<thead><tr><th>NAME</th><th>AISLE</th><th>BUILDING %</th><th>PATTERN %</th><th>CUBE</th></tr></thead>"
         rows = "".join([f'<tr><td>{e["NAME"]}</td><td>{e["AISLE"]}</td><td>{e["BUILDING"]}</td><td>{e["PATTERN"]}</td><td>{e["CUBE"]}</td></tr>' for e in st.session_state.history])
@@ -325,21 +242,14 @@ with col_main:
         if st.button("CLEAR LOG"): st.session_state.history = []; st.rerun()
 
 # --- SUPPORT SECTION ---
-import streamlit.components.v1 as components
-
 st.markdown("---")
 st.header("SUPPORT THE PROJECT")
-st.write("If you found RackOptimizer useful, consider helping keep the lights on.")
-
-# We changed target="_top" to target="_blank" to ensure it opens in a new tab
-paypal_form_html = """
+paypal_html = """
 <div style="text-align: left;">
     <form action="https://www.paypal.com/donate" method="post" target="_blank" rel="noopener noreferrer">
         <input type="hidden" name="hosted_button_id" value="RGB36EQS29ZGG" />
-        <input type="image" src="https://www.paypalobjects.com/en_US/i/btn/btn_donate_LG.gif" border="0" name="submit" title="PayPal - The safer, easier way to pay online!" alt="Donate with PayPal button" />
-        <img alt="" border="0" src="https://www.paypal.com/en_US/i/scr/pixel.gif" width="1" height="1" />
+        <input type="image" src="https://www.paypalobjects.com/en_US/i/btn/btn_donate_LG.gif" border="0" name="submit" title="PayPal" alt="Donate" />
     </form>
 </div>
 """
-
-components.html(paypal_form_html, height=150)
+components.html(paypal_html, height=150)
